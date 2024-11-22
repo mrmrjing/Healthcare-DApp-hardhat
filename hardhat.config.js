@@ -1,4 +1,4 @@
-require("@nomiclabs/hardhat-ethers"); // Import ethers plugin
+require("@nomicfoundation/hardhat-ethers");  // Import ethers plugin
 require("dotenv").config(); // Load environment variables from a .env file
 
 
@@ -17,10 +17,10 @@ module.exports = {
     localhost: {
       url: "http://127.0.0.1:8545", // Local Hardhat node URL
     },
-    rinkeby: {
-      url: process.env.RINKEBY_RPC_URL || "", // Infura or Alchemy RPC URL
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [], // Private key for deployment
-    },
+    // rinkeby: {
+    //   url: process.env.RINKEBY_RPC_URL || "", // Infura or Alchemy RPC URL
+    //   accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [], // Private key for deployment
+    // },
   },
   paths: {
     artifacts: "./artifacts", // Path for compiled artifacts
