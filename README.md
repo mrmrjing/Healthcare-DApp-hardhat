@@ -19,7 +19,14 @@ npm install
 npx hardhat node
 ```
 
+- Compile the contracts: 
+```bash
+npx hardhat compile
+```
+
 - To deploy the contracts to a specified network (local,testnet): 
 ```bash
 npx hardhat run scripts/deploy.js --network <network-name>
+npx hardhat run scripts/deploy.js --network localhost
+npx hardhat run scripts/deploy.js --network rinkeby
 ```
