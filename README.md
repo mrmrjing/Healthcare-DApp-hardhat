@@ -1,16 +1,15 @@
-1. Install Hardhat
+## Setup
+
+To get started with the project, follow these steps:
+
+### 1. Clone the repository
+If you haven’t already cloned the repository, do so using:
 ```bash
-npm install --save-dev hardhat
+git clone https://github.com/mrmrjing/Healthcare-DApp-hardhat
+cd Healthcare-DApp-hardhat
 ```
 
-2. Run the Hardhat setup wizard
+### 2. Install all required dependencies
 ```bash
-npx hardhat
+npm install 
 ```
-choose create an empty hardhat.config.js
-
-3. Install commonly used plugins lke ethers.js
-```bash
-npm install --save-dev @nomicfoundation/hardhat-toolbox
-```
-
