@@ -14,7 +14,12 @@ cd Healthcare-DApp-hardhat
 npm install 
 ```
 
-To deploy the contracts to a specified network (local,testnet): 
+- Start the Hardhat local network: 
+```bash
+npx hardhat node
+```
+
+- To deploy the contracts to a specified network (local,testnet): 
 ```bash
 npx hardhat run scripts/deploy.js --network <network-name>
 ```
