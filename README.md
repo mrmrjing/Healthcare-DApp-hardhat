@@ -30,3 +30,13 @@ npx hardhat run scripts/deploy.js --network <network-name>
 npx hardhat run scripts/deploy.js --network localhost
 npx hardhat run scripts/deploy.js --network rinkeby
 ```
+
+- To run unit tests: 
+```bash
+npx hardhat test
+```
+
+- To clean the cached builds: 
+```bash
+npx hardhat clean
+```
