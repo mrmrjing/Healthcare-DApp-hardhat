@@ -23,7 +23,7 @@ module.exports = {
     // },
   },
   paths: {
-    artifacts: "./artifacts", // Path for compiled artifacts
+    artifacts: "./frontend/src/artifacts", // Path for compiled artifacts
     sources: "./contracts", // Path for Solidity contracts
     tests: "./test", // Path for test files
     cache: "./cache", // Path for cache
