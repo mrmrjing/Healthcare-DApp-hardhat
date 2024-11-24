@@ -35,12 +35,12 @@ const WalletConnect = ({ onLogout }) => {
   };
 
   // Disconnect wallet (logs out the user)
-  const disconnectWallet = () => {
+  const disconnectWallet = React.useCallback(() => {
     setWalletAddress(null); // Clear wallet address from state
     localStorage.removeItem('walletAddress'); // Remove wallet from local storage
     setError('');
     if (onLogout) onLogout(); // Trigger additional logout logic if provided
-  };
+  }, [onLogout]);
 
   // Listen for account changes
   useEffect(() => {
@@ -63,7 +63,7 @@ const WalletConnect = ({ onLogout }) => {
     if (storedAddress) {
       setWalletAddress(storedAddress);
     }
-  }, []);
+  }, [disconnectWallet]);
 
   return (
     <div className="wallet-connect">
