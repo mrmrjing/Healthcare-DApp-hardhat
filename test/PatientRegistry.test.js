@@ -1,8 +1,19 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const ipfsClient = require('ipfs-http-client');
+require("@nomicfoundation/hardhat-chai-matchers");
+
+
 
 describe("PatientRegistry", function () {
     let PatientRegistry, patientRegistry, owner, addr1, addr2;
+
+    // Initialize IPFS client for local node
+    const ipfs = ipfsClient({
+        host: 'localhost',
+        port: '5001',
+        protocol: 'http',
+    });
 
     // Deploy the PatientRegistry contract and set up test accounts before each test
     beforeEach(async function () {
@@ -85,5 +96,31 @@ describe("PatientRegistry", function () {
         await expect(
             patientRegistry.connect(owner).registerPatient("cid2")
         ).to.be.revertedWith("Patient already registered");
+    });
+
+    // Test case: Verifies that the CID in the PatientRegistry contract matches the IPFS CID
+    it("should match the IPFS CID", async function () {
+       // Create patient data
+       const patientData = {
+        name: "Satoshi Nakamoto",
+        dob: "1990-01-01",
+        address: "123 Blockchain St",
+        medicalHistory: "None",
+        contact: "123-456-7890",
+    };
+
+    // Upload the data to IPFS
+    const result = await ipfs.add(JSON.stringify(patientData));
+    const ipfsCID = result.cid.toString();
+    console.log("Uploaded to IPFS. CID:", ipfsCID);
+
+    // Register the patient with the IPFS CID in the contract 
+    await patientRegistry.connect(owner).registerPatient(ipfsCID);
+
+    // Retrieve the CID from the contract 
+    const contractCID = await patientRegistry.getDataCID(owner.address);
+
+    // Assert that the CIDs match
+    expect(contractCID).to.equal(ipfsCID);
     });
 });
