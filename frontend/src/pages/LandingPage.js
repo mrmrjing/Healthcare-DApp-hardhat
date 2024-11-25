@@ -10,34 +10,17 @@ const LandingPage = () => {
 
   // Automatically redirect authenticated users with a role
   useEffect(() => {
-    console.log("LandingPage loaded");
-    console.log("Auth State on load:", authState);
-
-    if (
-      authState.isAuthenticated &&
-      authState.userRole &&
-      window.location.pathname === "/"
-    ) {
-      console.log(`Redirecting to /${authState.userRole}/dashboard`);
+    if (authState.isAuthenticated) {
       navigate(`/${authState.userRole}/dashboard`, { replace: true });
     }
   }, [authState, navigate]);
-
-  const selectRole = (role) => {
-    console.log(`Role selected: ${role}`);
-    login(role);
-  };
+  
 
   const handleLogout = () => {
-    console.log("Logging out...");
     logout();
     localStorage.removeItem("walletAddress");
     navigate("/");
   };
-
-  useEffect(() => {
-    console.log("Auth State updated:", authState);
-  }, [authState]);
 
   return (
     <div className="landing-page">
@@ -76,37 +59,25 @@ const LandingPage = () => {
             {!authState.isAuthenticated ? (
               <>
                 <button
-                  onClick={() => {
-                    console.log("Navigating to /patient/register");
-                    navigate("/patient/register");
-                  }}
+                  onClick={() => navigate("/patient/register")}
                   className="role-button patient-button"
                 >
                   Sign Up as Patient
                 </button>
                 <button
-                  onClick={() => {
-                    console.log("Navigating to /doctor/signup");
-                    navigate("/doctor/signup");
-                  }}
+                  onClick={() => navigate("/doctor/register")}
                   className="role-button doctor-button"
                 >
                   Sign Up as Doctor
                 </button>
                 <button
-                  onClick={() => {
-                    console.log("Navigating to /patient/login");
-                    navigate("/patient/login");
-                  }}
+                  onClick={() => navigate("/patient/login")}
                   className="role-button patient-login"
                 >
                   Log In as Patient
                 </button>
                 <button
-                  onClick={() => {
-                    console.log("Navigating to /doctor/login");
-                    navigate("/doctor/login");
-                  }}
+                  onClick={() => navigate("/doctor/login")}
                   className="role-button doctor-login"
                 >
                   Log In as Doctor
@@ -116,8 +87,7 @@ const LandingPage = () => {
               <>
                 <button
                   onClick={() => {
-                    console.log("Role selection: patient");
-                    selectRole("patient");
+                    login("patient");
                     navigate("/patient/dashboard");
                   }}
                   className="role-button patient-button"
@@ -126,8 +96,7 @@ const LandingPage = () => {
                 </button>
                 <button
                   onClick={() => {
-                    console.log("Role selection: doctor");
-                    selectRole("doctor");
+                    login("doctor");
                     navigate("/doctor/dashboard");
                   }}
                   className="role-button doctor-button"
