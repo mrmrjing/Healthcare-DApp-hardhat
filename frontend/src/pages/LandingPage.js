@@ -70,18 +70,6 @@ const LandingPage = () => {
                 >
                   Sign Up as Doctor
                 </button>
-                <button
-                  onClick={() => navigate("/patient/login")}
-                  className="role-button patient-login"
-                >
-                  Log In as Patient
-                </button>
-                <button
-                  onClick={() => navigate("/doctor/login")}
-                  className="role-button doctor-login"
-                >
-                  Log In as Doctor
-                </button>
               </>
             ) : (
               <>
