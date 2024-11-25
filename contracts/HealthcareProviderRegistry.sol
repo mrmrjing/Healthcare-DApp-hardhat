@@ -80,4 +80,10 @@ contract HealthcareProviderRegistry {
     function getProviderDataCID(address providerAddress) external view onlyAdmin returns (string memory) {
         return providers[providerAddress].dataCID;
     }
+
+    // Function to get the current admin address 
+    function getAdmin() external view returns (address) {
+        return admin;
+    }
+
 }
