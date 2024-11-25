@@ -2,6 +2,7 @@ import React, { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 import WalletConnect from "../components/WalletConnect";
+import deployedAddresses from "../artifacts/deployedAddresses.json";
 import "../styles/LandingPage.css";
 
 const LandingPage = () => {
@@ -14,12 +15,36 @@ const LandingPage = () => {
       navigate(`/${authState.userRole}/dashboard`, { replace: true });
     }
   }, [authState, navigate]);
-  
 
   const handleLogout = () => {
     logout();
     localStorage.removeItem("walletAddress");
     navigate("/");
+  };
+
+  const handleAdminLogin = async () => {
+    try {
+      if (!window.ethereum) {
+        alert("MetaMask is not detected. Please install MetaMask.");
+        return;
+      }
+
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      const userAddress = accounts[0]; // Get the connected wallet address
+
+      const adminAddress = deployedAddresses.Deployer; // Admin address from the deployedAddresses.json file
+
+      if (userAddress.toLowerCase() === adminAddress.toLowerCase()) {
+        login("admin"); // Update the AuthContext state to admin
+        navigate("/admin/dashboard"); // Redirect to the admin dashboard
+        alert("Logged in as admin successfully!");
+      } else {
+        alert("You are not authorized to log in as admin.");
+      }
+    } catch (error) {
+      console.error("Error during admin login:", error);
+      alert("Failed to log in as admin. Please try again.");
+    }
   };
 
   return (
@@ -69,6 +94,12 @@ const LandingPage = () => {
                   className="role-button doctor-button"
                 >
                   Sign Up as Doctor
+                </button>
+                <button
+                  onClick={handleAdminLogin} // Admin login handler
+                  className="role-button admin-button"
+                >
+                  Log In as Admin
                 </button>
               </>
             ) : (
