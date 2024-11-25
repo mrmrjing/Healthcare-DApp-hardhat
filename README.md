@@ -50,3 +50,10 @@ npx hardhat clean
 ```bash
 ipfs daemon
 ```
+
+- To allow IPFS node to allow HTTP requests frome external sources 
+```bash
+ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["*"]'
+ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["GET", "POST", "PUT"]'
+ipfs config --json API.HTTPHeaders.Access-Control-Allow-Headers '["Authorization"]'
+```
