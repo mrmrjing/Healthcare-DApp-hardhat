@@ -1,4 +1,4 @@
-import { JsonRpcProvider, Contract } from "ethers";
+import { BrowserProvider, Contract } from "ethers";
 import deployedAddresses from "../../artifacts/deployedAddresses.json";
 import AccessControlABI from "../../artifacts/contracts/AccessControl.sol/AccessControl.json";
 import HealthcareProviderRegistryABI from "../../artifacts/contracts/HealthcareProviderRegistry.sol/HealthcareProviderRegistry.json";
@@ -13,11 +13,25 @@ const CONTRACT_ADDRESSES = {
   patientRegistry: deployedAddresses.PatientRegistry,
 };
 
-const provider = new JsonRpcProvider("http://127.0.0.1:8545"); 
-const signer = provider.getSigner(); 
+// Get the provider wrapping MetaMask's window.ethereum
+const getProvider = async () => {
+  if (typeof window.ethereum === "undefined") {
+      throw new Error("MetaMask is not installed. Please install MetaMask to use this application.");
+  }
+
+  // Create a new BrowserProvider
+  return new BrowserProvider(window.ethereum);
+};
+
+// Get the signer for transactions
+const getSigner = async () => {
+  const provider = await getProvider();
+  return provider.getSigner();
+};
 
 // Get Contract Instance
-const getContract = (contractName) => {
+const getContract = async (contractName) => {
+  const signer = await getSigner();
   let abi, address;
 
   switch (contractName) {
@@ -166,15 +180,18 @@ export const getPatientRecords = async (patientAddress) => {
 
 // Allows a user to register as a patient with their data CID.
 export const registerPatient = async (dataCID) => {
-    try {
-      const patientRegistry = await getContract("patientRegistry");
-      const tx = await patientRegistry.registerPatient(dataCID);
-      await tx.wait();
-      console.log("Patient registered successfully.");
-    } catch (error) {
-      console.error("Error registering patient:", error);
-    }
-  };
+  try {
+    const patientRegistry = await getContract("patientRegistry");
+    const tx = await patientRegistry.registerPatient(dataCID);
+    await tx.wait(); // Wait for transaction confirmation
+    console.log("Patient registered successfully.");
+    return tx; // Return the transaction receipt for additional processing, if needed
+  } catch (error) {
+    console.error("Error registering patient:", error);
+    throw error; // Rethrow the error so the caller can handle it
+  }
+};
+
 
 // Enables a patient to grant access to their data to a provider.
 export const grantAccessToProvider = async (providerAddress) => {

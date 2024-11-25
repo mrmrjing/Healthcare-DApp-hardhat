@@ -36,7 +36,24 @@ npx hardhat run scripts/deploy.js --network rinkeby
 npx hardhat test
 ```
 
+- To run a specific test: 
+```bash
+npx hardhat test test/PatientRegistry.test.js
+```
+
 - To clean the cached builds: 
 ```bash
 npx hardhat clean
+```
+
+- To run the IPFS daemon to start the local node: 
+```bash
+ipfs daemon
+```
+
+- To allow IPFS node to allow HTTP requests frome external sources 
+```bash
+ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["*"]'
+ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["GET", "POST", "PUT"]'
+ipfs config --json API.HTTPHeaders.Access-Control-Allow-Headers '["Authorization"]'
 ```
