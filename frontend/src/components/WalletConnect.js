@@ -13,11 +13,11 @@ const WalletConnect = () => {
         const userAddress = accounts[0];
         const userRole = await fetchUserRole(userAddress);
   
-        if (userRole) {
-          // Update authentication state
+        if (userRole === "doctor") {
+          // Update authentication state for verified providers
           setAuthState({
             isAuthenticated: true,
-            userRole,
+            userRole: "doctor",
             userAddress,
           });
   
@@ -25,13 +25,23 @@ const WalletConnect = () => {
           alert(`You are connected as a ${userRole}.`);
   
           // Redirect to the dashboard after confirmation
-          if (userRole === "doctor") {
-            window.location.href = "/doctor/dashboard";
+          window.location.href = "/doctor/dashboard";
           } else if (userRole === "patient") {
-            window.location.href = "/patient/dashboard";
-          }
-        } else {
-          alert("No role found. Please register.");
+
+          // Update authentication state for patients
+          setAuthState({
+            isAuthenticated: true,
+            userRole: "patient",
+            userAddress,
+          });
+          // Show success message and redirect
+          alert("You are connected as a patient.");
+          window.location.href = "/patient/dashboard";
+        } else if (userRole === "unverified") {
+          alert("Provider is registered but not verified. Please contact the admin for verification.");
+        } else { 
+          // Display feedback message for unregistered users
+          setRoleMessage("User is not registered as a provider or patient.");
         }
       } catch (error) {
         console.error("Error connecting wallet:", error);
@@ -55,7 +65,7 @@ const WalletConnect = () => {
           return "doctor";
         } else {
           console.warn("Provider is registered but not verified.");
-          return null;
+          return "unverified";
         }
       }
 
