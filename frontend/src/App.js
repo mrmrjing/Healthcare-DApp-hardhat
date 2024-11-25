@@ -5,6 +5,7 @@ import PatientDashboardPage from "./pages/PatientDashboardPage";
 import GrantAccessPage from "./pages/GrantAccessPage";
 import PatientRegistration from "./pages/PatientRegistration";
 import { AuthContext } from "./contexts/AuthContext";
+import DoctorRegistration from "./pages/DoctorRegistration";
 
 function App() {
   const { authState } = React.useContext(AuthContext);
@@ -15,6 +16,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/patient/register" element={<PatientRegistration />} />
+        <Route path="/doctor/register" element={<DoctorRegistration />} />
 
         {/* Authenticated Routes for Patients */}
         {authState.isAuthenticated && authState.userRole === "patient" && (
