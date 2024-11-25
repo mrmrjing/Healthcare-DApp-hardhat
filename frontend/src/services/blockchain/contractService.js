@@ -180,15 +180,18 @@ export const getPatientRecords = async (patientAddress) => {
 
 // Allows a user to register as a patient with their data CID.
 export const registerPatient = async (dataCID) => {
-    try {
-      const patientRegistry = await getContract("patientRegistry");
-      const tx = await patientRegistry.registerPatient(dataCID);
-      await tx.wait();
-      console.log("Patient registered successfully.");
-    } catch (error) {
-      console.error("Error registering patient:", error);
-    }
-  };
+  try {
+    const patientRegistry = await getContract("patientRegistry");
+    const tx = await patientRegistry.registerPatient(dataCID);
+    await tx.wait(); // Wait for transaction confirmation
+    console.log("Patient registered successfully.");
+    return tx; // Return the transaction receipt for additional processing, if needed
+  } catch (error) {
+    console.error("Error registering patient:", error);
+    throw error; // Rethrow the error so the caller can handle it
+  }
+};
+
 
 // Enables a patient to grant access to their data to a provider.
 export const grantAccessToProvider = async (providerAddress) => {
