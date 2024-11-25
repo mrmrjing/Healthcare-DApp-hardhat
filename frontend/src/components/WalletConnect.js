@@ -1,84 +1,89 @@
-import React, { useState, useEffect } from 'react';
+import React, { useContext, useState } from "react";
+import { AuthContext } from "../contexts/AuthContext";
+import { isPatientRegistered, isProviderRegistered, isProviderVerified } from "../services/blockchain/contractService";
 
-const WalletConnect = ({ onLogout }) => {
-  const [walletAddress, setWalletAddress] = useState(null);
-  const [error, setError] = useState('');
+const WalletConnect = () => {
+  const { authState, setAuthState } = useContext(AuthContext);
+  const [roleMessage, setRoleMessage] = useState(""); // State to store feedback message
 
-  // Check if MetaMask is installed
-  const isMetaMaskInstalled = () => typeof window.ethereum !== 'undefined';
-
-  // Connect wallet
   const connectWallet = async () => {
+    if (window.ethereum) {
+      try {
+        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+        const userAddress = accounts[0];
+        const userRole = await fetchUserRole(userAddress);
+  
+        if (userRole) {
+          // Update authentication state
+          setAuthState({
+            isAuthenticated: true,
+            userRole,
+            userAddress,
+          });
+  
+          // Show an alert message for role confirmation
+          alert(`You are connected as a ${userRole}.`);
+  
+          // Redirect to the dashboard after confirmation
+          if (userRole === "doctor") {
+            window.location.href = "/doctor/dashboard";
+          } else if (userRole === "patient") {
+            window.location.href = "/patient/dashboard";
+          }
+        } else {
+          alert("No role found. Please register.");
+        }
+      } catch (error) {
+        console.error("Error connecting wallet:", error);
+        alert("Failed to connect wallet. Please try again.");
+      }
+    } else {
+      alert("MetaMask not detected. Please install MetaMask.");
+    }
+  };
+  
+
+  const fetchUserRole = async (address) => {
     try {
-      if (!isMetaMaskInstalled()) {
-        setError('MetaMask is not installed. Please install it to continue.');
-        return;
+      console.log("Checking if the address is a registered provider...");
+      const isRegisteredProvider = await isProviderRegistered(address);
+      if (isRegisteredProvider) {
+        console.log("Address is a registered provider. Checking verification status...");
+        const isVerifiedProvider = await isProviderVerified(address);
+        if (isVerifiedProvider) {
+          console.log("Provider is verified.");
+          return "doctor";
+        } else {
+          console.warn("Provider is registered but not verified.");
+          return null;
+        }
       }
 
-      // Request account access
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts',
-      });
-
-      const address = accounts[0]; // Get the first selected account
-      setWalletAddress(address); // Update state
-      localStorage.setItem('walletAddress', address); // Persist to local storage
-      setError('');
-    } catch (err) {
-      console.error('Error connecting wallet:', err);
-      if (err.code === 4001) {
-        setError('Connection request rejected by user.');
-      } else {
-        setError('Failed to connect wallet. Please try again.');
+      console.log("Checking if the address is a registered patient...");
+      const isRegisteredPatient = await isPatientRegistered(address);
+      if (isRegisteredPatient) {
+        console.log("Address is a registered patient.");
+        return "patient";
       }
+
+      console.warn("Address is neither a registered provider nor a patient.");
+      return null;
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+      return null;
     }
   };
 
-  // Disconnect wallet (logs out the user)
-  const disconnectWallet = React.useCallback(() => {
-    setWalletAddress(null); // Clear wallet address from state
-    localStorage.removeItem('walletAddress'); // Remove wallet from local storage
-    setError('');
-    if (onLogout) onLogout(); // Trigger additional logout logic if provided
-  }, [onLogout]);
-
-  // Listen for account changes
-  useEffect(() => {
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', (accounts) => {
-        if (accounts.length === 0) {
-          // Wallet disconnected
-          disconnectWallet();
-        } else {
-          // Wallet switched
-          const address = accounts[0];
-          setWalletAddress(address);
-          localStorage.setItem('walletAddress', address); // Update local storage
-        }
-      });
-    }
-
-    // Restore wallet connection on page load
-    const storedAddress = localStorage.getItem('walletAddress');
-    if (storedAddress) {
-      setWalletAddress(storedAddress);
-    }
-  }, [disconnectWallet]);
-
   return (
-    <div className="wallet-connect">
-      <h2>Wallet Connection</h2>
-      {walletAddress ? (
+    <div>
+      {!authState.isAuthenticated ? (
         <div>
-          <p>
-            Connected as: <span className="wallet-address">{walletAddress}</span>
-          </p>
-          <button onClick={disconnectWallet}>Disconnect Wallet</button>
+          <button onClick={connectWallet}>Connect Wallet</button>
+          {roleMessage && <p>{roleMessage}</p>} {/* Display feedback message */}
         </div>
       ) : (
-        <button onClick={connectWallet}>Connect Wallet</button>
+        <p>Wallet Connected: {authState.userAddress}</p>
       )}
-      {error && <p className="error-message">{error}</p>}
     </div>
   );
 };
