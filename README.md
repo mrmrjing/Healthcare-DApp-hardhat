@@ -46,6 +46,16 @@ npx hardhat test test/PatientRegistry.test.js
 npx hardhat clean
 ```
 
+- To install IPFS on MacOS: 
+```bash
+brew install ipfs
+```
+
+- To install IPFS on Windows: 
+```bash 
+https://docs.ipfs.tech/install/ipfs-desktop/#windows
+```
+
 - To run the IPFS daemon to start the local node: 
 ```bash
 ipfs daemon
