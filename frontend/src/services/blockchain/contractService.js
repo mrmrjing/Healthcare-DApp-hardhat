@@ -30,7 +30,7 @@ const getSigner = async () => {
 };
 
 // Get Contract Instance
-const getContract = async (contractName) => {
+export const getContract = async (contractName) => {
   const signer = await getSigner();
   let abi, address;
 
@@ -255,6 +255,8 @@ export const isPatientRegistered = async (patientAddress) => {
     return false; 
   }
 };
+
+
  
 
   
