@@ -268,6 +268,35 @@ export const getAllProviders = async () => {
   }
 }
 
+// Method to set up event listener for registered providers 
+export const listenForProviderRegistered = async (callback) => {
+  try {
+    const registry = await getContract("healthcareProviderRegistry");
+
+    // Listen for the ProviderRegistered event
+    registry.on("ProviderRegistered", (providerAddress, dataCID) => {
+      console.log("ProviderRegistered event received:", providerAddress, dataCID);
+      callback(providerAddress, dataCID); // Call the provided callback with event data
+    });
+
+    console.log("Listening for ProviderRegistered events...");
+  } catch (error) {
+    console.error("Error setting up ProviderRegistered event listener:", error);
+  }
+};
+
+// Method to remove event listener for registered providers
+export const removeProviderRegisteredListener = async () => {
+  try {
+    const registry = await getContract("healthcareProviderRegistry");
+    registry.removeAllListeners("ProviderRegistered");
+    console.log("Removed ProviderRegistered listener");
+  } catch (error) {
+    console.error("Error removing ProviderRegistered listener:", error);
+  }
+};
+
+
 
  
 

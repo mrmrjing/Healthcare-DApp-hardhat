@@ -1,20 +1,39 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   verifyProvider,
   isProviderRegistered,
   isProviderVerified,
   getAllProviders,
+  listenForProviderRegistered,
+  removeProviderRegisteredListener,
 } from "../services/blockchain/contractService";
 import "../styles/AdminDashboard.css";
 import { AuthContext } from "../contexts/AuthContext";
 
 const AdminDashboard = () => {
-    const { logout } = useContext(AuthContext); // Use the logout function from AuthContext
-    const navigate = useNavigate();
-    const [providerAddress, setProviderAddress] = useState("");
-    const [logs, setLogs] = useState([]);
-    const [registeredProviders, setRegisteredProviders] = useState([]);
+  const { logout } = useContext(AuthContext); // Use the logout function from AuthContext
+  const navigate = useNavigate();
+  const [providerAddress, setProviderAddress] = useState("");
+  const [logs, setLogs] = useState([]);
+  const [registeredProviders, setRegisteredProviders] = useState([]); // Fetched providers
+  const [newProviders, setNewProviders] = useState([]); // Newly registered providers from events
+
+  useEffect(() => {
+    // Set up the event listener for ProviderRegistered events
+    listenForProviderRegistered((providerAddress, dataCID) => {
+      addLog(`New provider registered: ${providerAddress} with CID: ${dataCID}`);
+      setNewProviders((prev) => [
+        ...prev,
+        { address: providerAddress, dataCID, isVerified: false },
+      ]);
+    });
+
+    // Cleanup the event listener when the component unmounts
+    return () => {
+      removeProviderRegisteredListener(); // Remove all listeners via contractService
+    };
+  }, []);
 
   const handleVerifyProvider = async () => {
     if (!providerAddress) {
@@ -36,11 +55,16 @@ const AdminDashboard = () => {
       return;
     }
 
-    const success = await verifyProvider(providerAddress);
-    if (success) {
+    try {
+      await verifyProvider(providerAddress);
       alert(`Provider ${providerAddress} verified successfully.`);
       addLog(`Verified provider: ${providerAddress}`);
-    } else {
+      setNewProviders((prev) =>
+        prev.map((provider) =>
+          provider.address === providerAddress ? { ...provider, isVerified: true } : provider
+        )
+      );
+    } catch (error) {
       alert(`Failed to verify provider: ${providerAddress}`);
       addLog(`Failed to verify provider: ${providerAddress}`);
     }
@@ -55,10 +79,12 @@ const AdminDashboard = () => {
         return;
       }
 
-      const formattedProviders = providers.map((providerAddress) => ({
-        address: providerAddress,
-        isVerified: isProviderVerified(providerAddress),
-      }));
+      const formattedProviders = await Promise.all(
+        providers.map(async (providerAddress) => ({
+          address: providerAddress,
+          isVerified: await isProviderVerified(providerAddress),
+        }))
+      );
       setRegisteredProviders(formattedProviders);
       addLog("Fetched registered providers.");
     } catch (error) {
@@ -75,9 +101,9 @@ const AdminDashboard = () => {
   const handleLogout = () => {
     logout(); // Call the logout function from AuthContext
     localStorage.removeItem("walletAddress"); // Remove the wallet address from local storage
-    navigate("/"); 
+    navigate("/");
   };
-  
+
   return (
     <div className="admin-dashboard-container">
       <header className="admin-dashboard-header">
@@ -100,6 +126,35 @@ const AdminDashboard = () => {
         <button onClick={handleVerifyProvider} className="admin-dashboard-button">
           Verify Provider
         </button>
+      </section>
+
+      {/* New Registered Providers Section */}
+      <section className="admin-dashboard-section">
+        <h2>Newly Registered Providers</h2>
+        {newProviders.length > 0 ? (
+          <ul className="admin-dashboard-list">
+            {newProviders.map((provider, index) => (
+              <li key={index} className="admin-dashboard-list-item">
+                Address: {provider.address}, CID: {provider.dataCID} -{" "}
+                {provider.isVerified ? (
+                  <span className="admin-dashboard-verified">Verified</span>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setProviderAddress(provider.address);
+                      handleVerifyProvider();
+                    }}
+                    className="admin-dashboard-button"
+                  >
+                    Verify
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No new providers registered yet.</p>
+        )}
       </section>
 
       {/* Registered Providers Section */}

@@ -50,6 +50,7 @@ contract HealthcareProviderRegistry {
             isVerified: false,
             dataCID: dataCID
         });
+        providerAddresses.push(msg.sender); // Add the provider's address to the array
         emit ProviderRegistered(msg.sender, dataCID); // Emit an event for successful registration
     }
 

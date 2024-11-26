@@ -36,6 +36,11 @@ npx hardhat run scripts/deploy.js --network rinkeby
 npx hardhat test
 ```
 
+- To remove compiled artifacts and cache folder: 
+```bash 
+npx hardhat clean
+```
+
 - To run a specific test: 
 ```bash
 npx hardhat test test/PatientRegistry.test.js
@@ -73,3 +78,5 @@ ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["*"]'
 ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["GET", "POST", "PUT"]'
 ipfs config --json API.HTTPHeaders.Access-Control-Allow-Headers '["Authorization"]'
 ```
+
+- If you face any bugs with wallet address showing 0 balance or weird interactions with connect wallet, just reinstall metamask" 
