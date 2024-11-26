@@ -41,6 +41,12 @@ npx hardhat test
 npx hardhat test test/PatientRegistry.test.js
 ```
 
+- To downgrade Node.js version to run tests, 
+```bash
+nvm install 16 
+nvm use 16
+```
+
 - To clean the cached builds: 
 ```bash
 npx hardhat clean
