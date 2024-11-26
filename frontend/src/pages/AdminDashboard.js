@@ -1,69 +1,95 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../contexts/AuthContext";
 import {
+  getProviderRegistryEvents,
   verifyProvider,
-  isProviderRegistered,
+  rejectProvider,
   isProviderVerified,
-  getAllProviders,
 } from "../services/blockchain/contractService";
 import "../styles/AdminDashboard.css";
-import { AuthContext } from "../contexts/AuthContext";
 
 const AdminDashboard = () => {
-    const { logout } = useContext(AuthContext); // Use the logout function from AuthContext
-    const navigate = useNavigate();
-    const [providerAddress, setProviderAddress] = useState("");
-    const [logs, setLogs] = useState([]);
-    const [registeredProviders, setRegisteredProviders] = useState([]);
+  const { logout } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [logs, setLogs] = useState([]);
+  const [registeredProviders, setRegisteredProviders] = useState([]);
 
-  const handleVerifyProvider = async () => {
-    if (!providerAddress) {
-      alert("Please enter a valid provider address.");
-      return;
-    }
-
-    const isRegistered = await isProviderRegistered(providerAddress);
-    if (!isRegistered) {
-      alert("The provider is not registered. Please check the address.");
-      addLog(`Failed to verify: ${providerAddress} is not registered.`);
-      return;
-    }
-
-    const isVerified = await isProviderVerified(providerAddress);
-    if (isVerified) {
-      alert("This provider is already verified.");
-      addLog(`Provider ${providerAddress} is already verified.`);
-      return;
-    }
-
-    const success = await verifyProvider(providerAddress);
-    if (success) {
-      alert(`Provider ${providerAddress} verified successfully.`);
-      addLog(`Verified provider: ${providerAddress}`);
-    } else {
-      alert(`Failed to verify provider: ${providerAddress}`);
-      addLog(`Failed to verify provider: ${providerAddress}`);
-    }
-    setProviderAddress("");
-  };
+  // Fetch providers and verification status when the component mounts
+  useEffect(() => {
+    fetchRegisteredProviders();
+  },);
 
   const fetchRegisteredProviders = async () => {
     try {
-      const providers = await getAllProviders();
-      if (providers.length === 0) {
-        alert("No providers found.");
+      // Fetch registered providers from event logs
+      const providersFromEvents = await getProviderRegistryEvents();
+  
+      // If no providers are found, update the log and return early
+      if (providersFromEvents.length === 0) {
+        addLog("No registered providers found.");
         return;
       }
-
-      const formattedProviders = providers.map((providerAddress) => ({
-        address: providerAddress,
-        isVerified: isProviderVerified(providerAddress),
-      }));
-      setRegisteredProviders(formattedProviders);
-      addLog("Fetched registered providers.");
+  
+      // Fetch verification and rejection status for each provider
+      const providersWithStatus = await Promise.all(
+        providersFromEvents.map(async (provider) => {
+          const isVerified = await isProviderVerified(provider.address);
+          return { ...provider, isVerified };
+        })
+      );
+  
+      // Check if the list has changed before updating state
+      if (
+        JSON.stringify(providersWithStatus) !== JSON.stringify(registeredProviders)
+      ) {
+        setRegisteredProviders(providersWithStatus);
+        addLog("Fetched registered providers successfully.");
+      } else {
+        addLog("No new providers found.");
+      }
     } catch (error) {
       console.error("Error fetching registered providers:", error);
+      addLog("Error fetching registered providers.");
       alert("Failed to fetch registered providers. Check the console for details.");
+    }
+  };
+  
+  
+
+  const handleVerifyProvider = async (address) => {
+    try {
+      const success = await verifyProvider(address);
+      if (success) {
+        addLog(`Provider ${address} verified successfully.`);
+        fetchRegisteredProviders(); // Refresh the provider list
+        alert(`Provider ${address} has been verified.`);
+      } else {
+        addLog(`Failed to verify provider: ${address}.`);
+        alert(`Failed to verify provider: ${address}.`);
+      }
+    } catch (error) {
+      console.error("Error verifying provider:", error);
+      addLog(`Error verifying provider: ${address}.`);
+      alert("An error occurred while verifying the provider.");
+    }
+  };
+
+  const handleRejectProvider = async (address) => {
+    try {
+      const success = await rejectProvider(address);
+      if (success) {
+        addLog(`Provider ${address} rejected successfully.`);
+        fetchRegisteredProviders(); // Refresh the provider list
+        alert(`Provider ${address} has been rejected.`);
+      } else {
+        addLog(`Failed to reject provider: ${address}.`);
+        alert(`Failed to reject provider: ${address}.`);
+      }
+    } catch (error) {
+      console.error("Error rejecting provider:", error);
+      addLog(`Error rejecting provider: ${address}.`);
+      alert("An error occurred while rejecting the provider.");
     }
   };
 
@@ -73,11 +99,11 @@ const AdminDashboard = () => {
   };
 
   const handleLogout = () => {
-    logout(); // Call the logout function from AuthContext
-    localStorage.removeItem("walletAddress"); // Remove the wallet address from local storage
-    navigate("/"); 
+    logout();
+    localStorage.removeItem("walletAddress");
+    navigate("/");
   };
-  
+
   return (
     <div className="admin-dashboard-container">
       <header className="admin-dashboard-header">
@@ -87,48 +113,53 @@ const AdminDashboard = () => {
         </button>
       </header>
 
-      {/* Verify Provider Section */}
-      <section className="admin-dashboard-section">
-        <h2>Verify Provider</h2>
-        <input
-          type="text"
-          placeholder="Enter provider address"
-          value={providerAddress}
-          onChange={(e) => setProviderAddress(e.target.value)}
-          className="admin-dashboard-input"
-        />
-        <button onClick={handleVerifyProvider} className="admin-dashboard-button">
-          Verify Provider
-        </button>
-      </section>
-
       {/* Registered Providers Section */}
       <section className="admin-dashboard-section">
-        <h2>Registered Providers</h2>
+        <h2>Registered Healthcare Providers</h2>
         <button onClick={fetchRegisteredProviders} className="admin-dashboard-button">
-          Fetch Registered Providers
+          Refresh Providers
         </button>
         {registeredProviders.length > 0 ? (
           <ul className="admin-dashboard-list">
             {registeredProviders.map((provider, index) => (
               <li key={index} className="admin-dashboard-list-item">
-                Address: {provider.address} -{" "}
-                {provider.isVerified ? (
-                  <span className="admin-dashboard-verified">Verified</span>
-                ) : (
-                  <span className="admin-dashboard-not-verified">Not Verified</span>
+                <p>
+                  <strong>Address:</strong> {provider.address} <br />
+                  <strong>CID:</strong> {provider.dataCID} <br />
+                  <strong>Status:</strong>{" "}
+                  {provider.isVerified ? (
+                    <span className="admin-dashboard-verified">Verified</span>
+                  ) : (
+                    <span className="admin-dashboard-not-verified">Not Verified</span>
+                  )}
+                </p>
+                {!provider.isVerified && (
+                  <div className="admin-dashboard-actions">
+                    <button
+                      onClick={() => handleVerifyProvider(provider.address)}
+                      className="admin-dashboard-button"
+                    >
+                      Verify
+                    </button>
+                    <button
+                      onClick={() => handleRejectProvider(provider.address)}
+                      className="admin-dashboard-button reject-button"
+                    >
+                      Reject
+                    </button>
+                  </div>
                 )}
               </li>
             ))}
           </ul>
         ) : (
-          <p>No providers fetched yet.</p>
+          <p>No registered providers found.</p>
         )}
       </section>
 
       {/* Logs Section */}
       <section className="admin-dashboard-section">
-        <h2>Logs</h2>
+        <h2>Activity Logs</h2>
         <ul className="admin-dashboard-log-list">
           {logs.map((log, index) => (
             <li key={index} className="admin-dashboard-log-item">
