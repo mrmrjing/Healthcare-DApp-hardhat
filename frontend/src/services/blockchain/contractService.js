@@ -268,6 +268,48 @@ export const getAllProviders = async () => {
   }
 }
 
+// Method to get the events emitted by the HealthcareProviderRegistry contract
+export const getProviderRegistryEvents = async () => {
+  try {
+    const registry = await getContract("healthcareProviderRegistry");
+
+    // Create a filter for the "ProviderRegistered" event
+    const filter = registry.filters.ProviderRegistered();
+
+    // Use queryFilter to get all past events for this filter
+    const events = await registry.queryFilter(filter);
+
+    // Parse the events to extract relevant data
+    const parsedEvents = events.map((event) => ({
+      address: event.args.providerAddress,
+      dataCID: event.args.dataCID,
+    }));
+
+    return parsedEvents;
+  } catch (error) {
+    console.error("Error fetching provider registry events:", error);
+    return [];
+  }
+};
+
+// Method to reject a provider verification request
+export const rejectProvider = async (providerAddress) => {
+  try {
+    const registry = await getContract("healthcareProviderRegistry");
+    const tx = await registry.rejectHealthcareProvider(providerAddress);
+    await tx.wait();
+    console.log("Provider rejected.");
+    return true;
+  } catch (error) {
+    console.error("Error rejecting provider:", error);
+    return false;
+  }
+};
+
+
+
+
+
 
  
 
