@@ -69,9 +69,12 @@ contract PatientRegistry {
 
     // Function to check if a provider is authorized for a specific patient
     function isAuthorized(address patientAddress, address providerAddress) external view returns (bool) {
-        require(isRegistered[patientAddress], "Patient is not registered"); // Ensure the patient is registered
-        return patients[patientAddress].authorizedProviders[providerAddress]; // Return the authorization status
+    // If the patient is not registered, return false instead of reverting
+    if (!isRegistered[patientAddress]) {
+        return false;
     }
+    return patients[patientAddress].authorizedProviders[providerAddress];
+}
 
     // Function to retrieve the off-chain data CID for a patient
     // - Only the patient or authorized providers can call this function
