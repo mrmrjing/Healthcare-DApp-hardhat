@@ -256,6 +256,18 @@ export const isPatientRegistered = async (patientAddress) => {
   }
 };
 
+// Method to get all registered providers
+export const getAllProviders = async () => {
+  try {
+    const registry = await getContract("healthcareProviderRegistry");
+    const providers = await registry.getAllProviders();
+    return providers;
+  } catch (error) {
+    console.error("Error fetching providers:", error);
+    return [];
+  }
+}
+
 
  
 
