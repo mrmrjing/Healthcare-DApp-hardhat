@@ -2,13 +2,14 @@
 pragma solidity ^0.8.0;
 
 contract HealthcareProviderRegistry {
-    // The administrator of the contract which initially is the 
+    // The administrator of the contract which initially is the deployer 
     address public admin;
 
     // Struct to store information about a healthcare provider
     struct HealthcareProvider {
         bool isRegistered; // Indicates if the provider is registered
         bool isVerified;   // Indicates if the provider is verified by the admin
+        bool isRejected; // Indicates if the provider is rejected by the admin
         string dataCID;    // Content Identifier for encrypted off-chain provider data
     }
 
@@ -22,6 +23,7 @@ contract HealthcareProviderRegistry {
     event ProviderRegistered(address indexed providerAddress, string dataCID);
     event ProviderVerified(address indexed providerAddress);
     event ProviderDataUpdated(address indexed providerAddress, string newDataCID);
+    event ProviderRejected(address indexed providerAddress);
 
     // Modifier to restrict certain functions to the admin only
     modifier onlyAdmin() {
@@ -48,8 +50,10 @@ contract HealthcareProviderRegistry {
         providers[msg.sender] = HealthcareProvider({
             isRegistered: true,
             isVerified: false,
+            isRejected: false,
             dataCID: dataCID
         });
+        providerAddresses.push(msg.sender); // Add the provider's address to the list of registered providers
         emit ProviderRegistered(msg.sender, dataCID); // Emit an event for successful registration
     }
 
@@ -57,8 +61,18 @@ contract HealthcareProviderRegistry {
     // - Ensures the provider is registered before verifying
     function verifyHealthcareProvider(address providerAddress) external onlyAdmin {
         require(providers[providerAddress].isRegistered, "Provider not registered");
+        require(!providers[providerAddress].isVerified, "Provider already verified");
+        require(!providers[providerAddress].isRejected, "Provider has been rejected");
         providers[providerAddress].isVerified = true;
         emit ProviderVerified(providerAddress); // Emit an event for successful verification
+    }
+
+    // Function for the admin to reject a healthcare provider
+    function rejectHealthcareProvider(address providerAddress) external onlyAdmin {
+        require(providers[providerAddress].isRegistered, "Provider not registered");
+        require(!providers[providerAddress].isRejected, "Provider already rejected");
+        providers[providerAddress].isRejected = true;
+        emit ProviderRejected(providerAddress); // Emit an event for rejection
     }
 
     // Function to check if a provider is verified
