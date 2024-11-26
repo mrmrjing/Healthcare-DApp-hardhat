@@ -8,13 +8,15 @@ import "../styles/LandingPage.css";
 const LandingPage = () => {
   const { authState, login, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const { isAuthenticated, userRole } = authState;
 
   // Automatically redirect authenticated users with a role
   useEffect(() => {
-    if (authState.isAuthenticated) {
-      navigate(`/${authState.userRole}/dashboard`, { replace: true });
-    }
-  }, [authState, navigate]);
+  if (isAuthenticated && userRole) {
+    navigate(`/${userRole}/dashboard`, { replace: true });
+  }
+}, [isAuthenticated, userRole, navigate]);
+
 
   const handleLogout = () => {
     logout();
