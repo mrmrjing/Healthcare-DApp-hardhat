@@ -1,16 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   verifyProvider,
   isProviderRegistered,
   isProviderVerified,
-  getContract,
+  getAllProviders,
 } from "../services/blockchain/contractService";
 import "../styles/AdminDashboard.css";
+import { AuthContext } from "../contexts/AuthContext";
 
 const AdminDashboard = () => {
-  const [providerAddress, setProviderAddress] = useState("");
-  const [logs, setLogs] = useState([]);
-  const [registeredProviders, setRegisteredProviders] = useState([]);
+    const { logout } = useContext(AuthContext); // Use the logout function from AuthContext
+    const navigate = useNavigate();
+    const [providerAddress, setProviderAddress] = useState("");
+    const [logs, setLogs] = useState([]);
+    const [registeredProviders, setRegisteredProviders] = useState([]);
 
   const handleVerifyProvider = async () => {
     if (!providerAddress) {
@@ -45,11 +49,15 @@ const AdminDashboard = () => {
 
   const fetchRegisteredProviders = async () => {
     try {
-      const registry = await getContract("healthcareProviderRegistry");
-      const providers = await registry.getAllProviders();
-      const formattedProviders = providers.map((provider) => ({
-        address: provider.providerAddress,
-        isVerified: provider.isVerified,
+      const providers = await getAllProviders();
+      if (providers.length === 0) {
+        alert("No providers found.");
+        return;
+      }
+
+      const formattedProviders = providers.map((providerAddress) => ({
+        address: providerAddress,
+        isVerified: isProviderVerified(providerAddress),
       }));
       setRegisteredProviders(formattedProviders);
       addLog("Fetched registered providers.");
@@ -64,9 +72,20 @@ const AdminDashboard = () => {
     setLogs((prevLogs) => [...prevLogs, `[${timestamp}] ${message}`]);
   };
 
+  const handleLogout = () => {
+    logout(); // Call the logout function from AuthContext
+    localStorage.removeItem("walletAddress"); // Remove the wallet address from local storage
+    navigate("/"); 
+  };
+  
   return (
     <div className="admin-dashboard-container">
-      <h1 className="admin-dashboard-header">Admin Dashboard</h1>
+      <header className="admin-dashboard-header">
+        <h1>Admin Dashboard</h1>
+        <button onClick={handleLogout} className="logout-button">
+          Logout
+        </button>
+      </header>
 
       {/* Verify Provider Section */}
       <section className="admin-dashboard-section">
