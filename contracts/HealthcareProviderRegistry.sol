@@ -15,6 +15,9 @@ contract HealthcareProviderRegistry {
     // Mapping(key-value store) to store healthcare provider data, keyed by their Ethereum address
     mapping(address => HealthcareProvider) private providers;
 
+    // Array to store the addresses of all registered providers
+    address[] private providerAddresses;
+
     // Events to log significant actions
     event ProviderRegistered(address indexed providerAddress, string dataCID);
     event ProviderVerified(address indexed providerAddress);
@@ -79,5 +82,10 @@ contract HealthcareProviderRegistry {
     // Function for the admin to retrieve the data CID of a specific provider
     function getProviderDataCID(address providerAddress) external view onlyAdmin returns (string memory) {
         return providers[providerAddress].dataCID;
+    }
+
+    // Function to get all registered providers
+    function getAllProviders() external view onlyAdmin returns (address[] memory) {
+        return providerAddresses; 
     }
 }

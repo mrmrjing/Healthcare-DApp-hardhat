@@ -2,42 +2,52 @@ import React, { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 import WalletConnect from "../components/WalletConnect";
+import deployedAddresses from "../artifacts/deployedAddresses.json";
 import "../styles/LandingPage.css";
 
 const LandingPage = () => {
   const { authState, login, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const { isAuthenticated, userRole } = authState;
 
   // Automatically redirect authenticated users with a role
   useEffect(() => {
-    console.log("LandingPage loaded");
-    console.log("Auth State on load:", authState);
+  if (isAuthenticated && userRole) {
+    navigate(`/${userRole}/dashboard`, { replace: true });
+  }
+}, [isAuthenticated, userRole, navigate]);
 
-    if (
-      authState.isAuthenticated &&
-      authState.userRole &&
-      window.location.pathname === "/"
-    ) {
-      console.log(`Redirecting to /${authState.userRole}/dashboard`);
-      navigate(`/${authState.userRole}/dashboard`, { replace: true });
-    }
-  }, [authState, navigate]);
-
-  const selectRole = (role) => {
-    console.log(`Role selected: ${role}`);
-    login(role);
-  };
 
   const handleLogout = () => {
-    console.log("Logging out...");
     logout();
     localStorage.removeItem("walletAddress");
     navigate("/");
   };
 
-  useEffect(() => {
-    console.log("Auth State updated:", authState);
-  }, [authState]);
+  const handleAdminLogin = async () => {
+    try {
+      if (!window.ethereum) {
+        alert("MetaMask is not detected. Please install MetaMask.");
+        return;
+      }
+
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      const userAddress = accounts[0]; // Get the connected wallet address
+
+      const adminAddress = deployedAddresses.Deployer; // Admin address from the deployedAddresses.json file
+
+      if (userAddress.toLowerCase() === adminAddress.toLowerCase()) {
+        login("admin"); // Update the AuthContext state to admin
+        navigate("/admin/dashboard"); // Redirect to the admin dashboard
+        alert("Logged in as admin successfully!");
+      } else {
+        alert("You are not authorized to log in as admin.");
+      }
+    } catch (error) {
+      console.error("Error during admin login:", error);
+      alert("Failed to log in as admin. Please try again.");
+    }
+  };
 
   return (
     <div className="landing-page">
@@ -76,48 +86,29 @@ const LandingPage = () => {
             {!authState.isAuthenticated ? (
               <>
                 <button
-                  onClick={() => {
-                    console.log("Navigating to /patient/register");
-                    navigate("/patient/register");
-                  }}
+                  onClick={() => navigate("/patient/register")}
                   className="role-button patient-button"
                 >
                   Sign Up as Patient
                 </button>
                 <button
-                  onClick={() => {
-                    console.log("Navigating to /doctor/signup");
-                    navigate("/doctor/signup");
-                  }}
+                  onClick={() => navigate("/doctor/register")}
                   className="role-button doctor-button"
                 >
                   Sign Up as Doctor
                 </button>
                 <button
-                  onClick={() => {
-                    console.log("Navigating to /patient/login");
-                    navigate("/patient/login");
-                  }}
-                  className="role-button patient-login"
+                  onClick={handleAdminLogin} // Admin login handler
+                  className="role-button admin-button"
                 >
-                  Log In as Patient
-                </button>
-                <button
-                  onClick={() => {
-                    console.log("Navigating to /doctor/login");
-                    navigate("/doctor/login");
-                  }}
-                  className="role-button doctor-login"
-                >
-                  Log In as Doctor
+                  Log In as Admin
                 </button>
               </>
             ) : (
               <>
                 <button
                   onClick={() => {
-                    console.log("Role selection: patient");
-                    selectRole("patient");
+                    login("patient");
                     navigate("/patient/dashboard");
                   }}
                   className="role-button patient-button"
@@ -126,8 +117,7 @@ const LandingPage = () => {
                 </button>
                 <button
                   onClick={() => {
-                    console.log("Role selection: doctor");
-                    selectRole("doctor");
+                    login("doctor");
                     navigate("/doctor/dashboard");
                   }}
                   className="role-button doctor-button"

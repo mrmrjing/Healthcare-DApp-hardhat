@@ -30,7 +30,7 @@ const getSigner = async () => {
 };
 
 // Get Contract Instance
-const getContract = async (contractName) => {
+export const getContract = async (contractName) => {
   const signer = await getSigner();
   let abi, address;
 
@@ -111,15 +111,18 @@ export const checkAccess = async (patientAddress, providerAddress) => {
 
 // Allows a provider to register themselves with a data CID.
 export const registerProvider = async (dataCID) => {
-    try {
-      const registry = await getContract("healthcareProviderRegistry");
-      const tx = await registry.registerHealthcareProvider(dataCID);
-      await tx.wait();
-      console.log("Provider registered successfully.");
-    } catch (error) {
-      console.error("Error registering provider:", error);
-    }
-  };
+  try {
+    const registry = await getContract("healthcareProviderRegistry");
+    const tx = await registry.registerHealthcareProvider(dataCID);
+    await tx.wait(); // Wait for transaction confirmation
+    console.log("Provider registered successfully.");
+    return tx; // Return the transaction receipt for further processing
+  } catch (error) {
+    console.error("Error registering provider:", error);
+    throw error; // Rethrow the error so the caller can handle it
+  }
+};
+
 
 // Enables the admin to verify a registered provider.
 export const verifyProvider = async (providerAddress) => {
@@ -182,6 +185,7 @@ export const getPatientRecords = async (patientAddress) => {
 export const registerPatient = async (dataCID) => {
   try {
     const patientRegistry = await getContract("patientRegistry");
+    console.log("Registering patient with CID:", dataCID);
     const tx = await patientRegistry.registerPatient(dataCID);
     await tx.wait(); // Wait for transaction confirmation
     console.log("Patient registered successfully.");
@@ -228,5 +232,43 @@ export const isAuthorized = async (patientAddress, providerAddress) => {
     }
   };
   
-  
+// Checks if a provider is registered 
+export const isProviderRegistered = async (providerAddress) => {
+  try {
+    const registry = await getContract("healthcareProviderRegistry");
+    const isRegistered = await registry.isProviderRegistered(providerAddress);
+    return isRegistered;
+  } catch (error) {
+    console.error("Error checking provider registration:", error);
+    return false; 
+  }
+};
+
+// Checks if a patient is registered
+export const isPatientRegistered = async (patientAddress) => {
+  try {
+    const patientRegistry = await getContract("patientRegistry");
+    const isRegistered = await patientRegistry.isPatientRegistered(patientAddress);
+    return isRegistered;
+  } catch (error) {
+    console.error("Error checking patient registration:", error);
+    return false; 
+  }
+};
+
+// Method to get all registered providers
+export const getAllProviders = async () => {
+  try {
+    const registry = await getContract("healthcareProviderRegistry");
+    const providers = await registry.getAllProviders();
+    return providers;
+  } catch (error) {
+    console.error("Error fetching providers:", error);
+    return [];
+  }
+}
+
+
+ 
+
   
