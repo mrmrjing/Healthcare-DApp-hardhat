@@ -4,11 +4,28 @@ import LandingPage from "./pages/LandingPage";
 import PatientDashboardPage from "./pages/PatientDashboardPage";
 import GrantAccessPage from "./pages/GrantAccessPage";
 import PatientRegistration from "./pages/PatientRegistration";
-import { AuthContext } from "./contexts/AuthContext";
 import DoctorRegistration from "./pages/DoctorRegistration";
+import AdminDashboard from "./pages/AdminDashboard";
+import { AuthContext } from "./contexts/AuthContext";
 
 function App() {
   const { authState } = React.useContext(AuthContext);
+
+  // Inline ProtectedRoute logic
+  const ProtectedRoute = ({ children, requiredRole }) => {
+    if (!authState.isAuthenticated) {
+      // Redirect to the landing page if not authenticated
+      return <Navigate to="/" replace />;
+    }
+
+    if (requiredRole && authState.userRole !== requiredRole) {
+      // Redirect if the user's role doesn't match the required role
+      return <Navigate to="/" replace />;
+    }
+
+    // Render children if authentication and role requirements are met
+    return children;
+  };
 
   return (
     <Router>
@@ -18,16 +35,34 @@ function App() {
         <Route path="/patient/register" element={<PatientRegistration />} />
         <Route path="/doctor/register" element={<DoctorRegistration />} />
 
-        {/* Authenticated Routes for Patients */}
-        {authState.isAuthenticated && authState.userRole === "patient" && (
-          <>
-            <Route path="/patient/dashboard" element={<PatientDashboardPage />} />
-            <Route path="/patient/grant-access" element={<GrantAccessPage />} />
-          </>
-        )}
+        {/* Protected Routes */}
+        <Route
+          path="/patient/dashboard"
+          element={
+            <ProtectedRoute requiredRole="patient">
+              <PatientDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/patient/grant-access"
+          element={
+            <ProtectedRoute requiredRole="patient">
+              <GrantAccessPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Catch-All Route */}
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
