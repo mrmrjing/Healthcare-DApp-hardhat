@@ -25,9 +25,14 @@ const AdminDashboard = () => {
       // Fetch registered providers from event logs
       const providersFromEvents = await getProviderRegistryEvents();
   
-      // If no providers are found, update the log and return early
+      // If no providers are found
       if (providersFromEvents.length === 0) {
-        addLog("No registered providers found.");
+        if (registeredProviders.length === 0) {
+          // Log only once if no providers exist
+          if (!logs.some((log) => log.includes("No registered providers found."))) {
+            addLog("No registered providers found.");
+          }
+        }
         return;
       }
   
@@ -46,14 +51,17 @@ const AdminDashboard = () => {
         setRegisteredProviders(providersWithStatus);
         addLog("Fetched registered providers successfully.");
       } else {
-        addLog("No new providers found.");
+        // Log "No new providers found" only once
+        if (!logs.some((log) => log.includes("No new providers found."))) {
+          addLog("No new providers found.");
+        }
       }
     } catch (error) {
       console.error("Error fetching registered providers:", error);
       addLog("Error fetching registered providers.");
-      alert("Failed to fetch registered providers. Check the console for details.");
     }
   };
+  
   
   
 
