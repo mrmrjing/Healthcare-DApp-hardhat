@@ -81,6 +81,12 @@ contract HealthcareProviderRegistry {
         return providers[providerAddress].isVerified;
     }
 
+    // Function to check if a provider is rejected
+    function isProviderRejected(address providerAddress) external view returns (bool) {
+        return providers[providerAddress].isRejected;
+    }
+
+
     // Function to check if a provider is registered
     // - Publicly accessible
     function isProviderRegistered(address providerAddress) external view returns (bool) {
