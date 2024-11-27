@@ -131,8 +131,10 @@ export const verifyProvider = async (providerAddress) => {
       const tx = await registry.verifyHealthcareProvider(providerAddress);
       await tx.wait();
       console.log("Provider verified.");
+      return true; // Return true on success
     } catch (error) {
       console.error("Error verifying provider:", error);
+      return false; // Return false on failure
     }
   };
 
@@ -244,6 +246,18 @@ export const isProviderRegistered = async (providerAddress) => {
   }
 };
 
+// Checks if a provider is rejected
+export const isProviderRejected = async (providerAddress) => {
+  try {
+    const registry = await getContract("healthcareProviderRegistry");
+    const isRejected = await registry.isProviderRejected(providerAddress);
+    return isRejected;
+  } catch (error) {
+    console.error("Error checking provider rejection:", error);
+    return false; 
+  }
+};
+
 // Checks if a patient is registered
 export const isPatientRegistered = async (patientAddress) => {
   try {
@@ -271,24 +285,33 @@ export const getAllProviders = async () => {
 // Method to get the events emitted by the HealthcareProviderRegistry contract
 export const getProviderRegistryEvents = async () => {
   try {
-    const registry = await getContract("healthcareProviderRegistry");
+      const registry = await getContract("healthcareProviderRegistry");
 
-    // Create a filter for the "ProviderRegistered" event
-    const filter = registry.filters.ProviderRegistered();
+      // Fetch events for registered providers
+      const registeredFilter = registry.filters.ProviderRegistered();
+      const registeredEvents = await registry.queryFilter(registeredFilter, 0);
 
-    // Use queryFilter to get all past events for this filter
-    const events = await registry.queryFilter(filter);
+      // Fetch additional data (isVerified and isRejected) for each provider
+      const parsedEvents = await Promise.all(
+          registeredEvents.map(async (event) => {
+              const providerAddress = event.args.providerAddress;
 
-    // Parse the events to extract relevant data
-    const parsedEvents = events.map((event) => ({
-      address: event.args.providerAddress,
-      dataCID: event.args.dataCID,
-    }));
+              const isRejected = await registry.isProviderRejected(providerAddress);
+              const isVerified = await registry.isProviderVerified(providerAddress);
 
-    return parsedEvents;
+              return {
+                  address: providerAddress,
+                  dataCID: event.args.dataCID,
+                  isRejected,
+                  isVerified,
+              };
+          })
+      );
+
+      return parsedEvents;
   } catch (error) {
-    console.error("Error fetching provider registry events:", error);
-    return [];
+      console.error("Error fetching provider registry events:", error);
+      return [];
   }
 };
 
