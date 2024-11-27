@@ -1,0 +1,85 @@
+/* Container */
+.admin-dashboard-container {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    max-width: 800px;
+    margin: auto;
+  }
+  
+  /* Header */
+  .admin-dashboard-header {
+    text-align: center;
+    color: #333;
+  }
+  
+  /* Section */
+  .admin-dashboard-section {
+    margin-bottom: 30px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+  }
+  
+  /* Input */
+  .admin-dashboard-input {
+    width: 80%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+  }
+  
+  /* Button */
+  .admin-dashboard-button {
+    padding: 10px 20px;
+    background-color: #4caf50;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .admin-dashboard-button:hover {
+    background-color: #45a049;
+  }
+  
+  /* Provider List */
+  .admin-dashboard-list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .admin-dashboard-list-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .admin-dashboard-verified {
+    color: green;
+    font-weight: bold;
+  }
+  
+  .admin-dashboard-not-verified {
+    color: red;
+    font-weight: bold;
+  }
+  
+  /* Logs Section */
+  .admin-dashboard-log-list {
+    list-style: none;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px;
+  }
+  
+  .admin-dashboard-log-item {
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 5px;
+  }
+  
