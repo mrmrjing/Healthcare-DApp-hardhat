@@ -16,6 +16,20 @@ export const AuthProvider = ({ children }) => {
   });
 
   useEffect(() => {
+    if (!localStorage.getItem("initialized")) {
+      localStorage.removeItem("authState");
+      localStorage.setItem("initialized", "true");
+      setAuthState({
+        isAuthenticated: false,
+        userRole: null,
+        userAddress: null,
+      });
+    }
+  }, []);
+  
+  
+  
+  useEffect(() => {
     localStorage.setItem("authState", JSON.stringify(authState));
   }, [authState]);
 
