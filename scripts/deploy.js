@@ -24,6 +24,15 @@ async function main() {
     const healthcareProviderRegistryAddress = await healthcareProviderRegistry.getAddress();
     console.log("HealthcareProviderRegistry deployed to:", healthcareProviderRegistryAddress);
     addresses.HealthcareProviderRegistry = healthcareProviderRegistryAddress;
+    
+    // Check state
+    console.log("Checking initial state of HealthcareProviderRegistry...");
+    const registeredProviders = await healthcareProviderRegistry.getAllProviders();
+    if (registeredProviders.length === 0) {
+        console.log("Initial state: No providers registered. Blockchain state is fresh.");
+    } else {
+        console.log("Warning: Providers are already registered:", registeredProviders);
+    }
 
     console.log("Deploying AccessControl...");
     const AccessControl = await ethers.getContractFactory("AccessControl");
