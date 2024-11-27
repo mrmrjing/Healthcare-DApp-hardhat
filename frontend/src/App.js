@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useContext } from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import PatientDashboardPage from "./pages/PatientDashboardPage";
@@ -9,9 +9,23 @@ import AdminDashboard from "./pages/AdminDashboard";
 import { AuthContext } from "./contexts/AuthContext";
 
 function App() {
-  const { authState } = React.useContext(AuthContext);
+  const { authState, setAuthState } = useContext(AuthContext);
 
-  // Inline ProtectedRoute logic
+  // Clear state and storage on app load
+  useEffect(() => {
+    const clearPersistentData = () => {
+      localStorage.clear(); // Clear all local storage
+      setAuthState({
+        isAuthenticated: false,
+        userRole: null,
+        userAddress: null,
+      });
+    };
+
+    clearPersistentData();
+  }, [setAuthState]);
+
+  // ProtectedRoute Logic
   const ProtectedRoute = ({ children, requiredRole }) => {
     if (!authState.isAuthenticated) {
       // Redirect to the landing page if not authenticated
