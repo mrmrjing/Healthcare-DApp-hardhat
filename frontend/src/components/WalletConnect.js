@@ -113,7 +113,7 @@ const WalletConnect = () => {
         window.ethereum.removeListener("chainChanged", handleNetworkChange);
       };
     }
-  }, []);
+  },);
 
   return (
     <div>
