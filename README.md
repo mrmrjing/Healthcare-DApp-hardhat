@@ -74,7 +74,7 @@ ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["GET", "POST",
 ipfs config --json API.HTTPHeaders.Access-Control-Allow-Headers '["Authorization"]'
 ```
 
-- If you face any bugs with wallet address showing 0 balance or weird interactions with connect wallet, just reinstall metamask" 
+- If you face any bugs with wallet address showing 0 balance or weird interactions with connect wallet, just reinstall metamask
 Especially error code like this: 
 MetaMask - RPC Error: Internal JSON-RPC error. 
 {code: -32603, message: 'Internal JSON-RPC error.', data: {…}, stack: '{\n  "code": -32603,\n  "message": "Internal JSON-RP…hfbeogaeaoehlefnkodbefgpgknn/common-1.js:1:210555'}
