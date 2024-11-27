@@ -1,46 +1,47 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../contexts/AuthContext";
-import { isPatientRegistered, isProviderRegistered, isProviderVerified } from "../services/blockchain/contractService";
+import {
+  isPatientRegistered,
+  isProviderRegistered,
+  isProviderVerified,
+} from "../services/blockchain/contractService";
 
 const WalletConnect = () => {
   const { authState, setAuthState } = useContext(AuthContext);
   const [roleMessage, setRoleMessage] = useState(""); // State to store feedback message
 
+  // Connect wallet and determine user role
   const connectWallet = async () => {
     if (window.ethereum) {
       try {
+        // Clear any existing app state
+        clearAppState();
+
+        // Request wallet connection
         const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
         const userAddress = accounts[0];
         const userRole = await fetchUserRole(userAddress);
-  
+
+        // Handle different roles
         if (userRole === "doctor") {
-          // Update authentication state for verified providers
           setAuthState({
             isAuthenticated: true,
             userRole: "doctor",
             userAddress,
           });
-  
-          // Show an alert message for role confirmation
-          alert(`You are connected as a ${userRole}.`);
-  
-          // Redirect to the dashboard after confirmation
+          alert("You are connected as a doctor.");
           window.location.href = "/doctor/dashboard";
-          } else if (userRole === "patient") {
-
-          // Update authentication state for patients
+        } else if (userRole === "patient") {
           setAuthState({
             isAuthenticated: true,
             userRole: "patient",
             userAddress,
           });
-          // Show success message and redirect
           alert("You are connected as a patient.");
           window.location.href = "/patient/dashboard";
         } else if (userRole === "unverified") {
           alert("Provider is registered but not verified. Please contact the admin for verification.");
-        } else { 
-          // Display feedback message for unregistered users
+        } else {
           setRoleMessage("User is not registered as a provider or patient.");
         }
       } catch (error) {
@@ -51,38 +52,68 @@ const WalletConnect = () => {
       alert("MetaMask not detected. Please install MetaMask.");
     }
   };
-  
 
+  // Fetch user role based on wallet address
   const fetchUserRole = async (address) => {
     try {
-      console.log("Checking if the address is a registered provider...");
       const isRegisteredProvider = await isProviderRegistered(address);
       if (isRegisteredProvider) {
-        console.log("Address is a registered provider. Checking verification status...");
         const isVerifiedProvider = await isProviderVerified(address);
-        if (isVerifiedProvider) {
-          console.log("Provider is verified.");
-          return "doctor";
-        } else {
-          console.warn("Provider is registered but not verified.");
-          return "unverified";
-        }
+        return isVerifiedProvider ? "doctor" : "unverified";
       }
 
-      console.log("Checking if the address is a registered patient...");
       const isRegisteredPatient = await isPatientRegistered(address);
       if (isRegisteredPatient) {
-        console.log("Address is a registered patient.");
         return "patient";
       }
 
-      console.warn("Address is neither a registered provider nor a patient.");
       return null;
     } catch (error) {
       console.error("Error fetching user role:", error);
       return null;
     }
   };
+
+  // Clear app state when resetting or switching wallets
+  const clearAppState = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    setAuthState({
+      isAuthenticated: false,
+      userRole: null,
+      userAddress: null,
+    });
+    setRoleMessage("");
+  };
+
+  // Handle MetaMask account or network changes
+  useEffect(() => {
+    if (window.ethereum) {
+      const handleAccountChange = (accounts) => {
+        if (accounts.length === 0) {
+          console.log("MetaMask disconnected. Clearing app state...");
+          clearAppState();
+        } else {
+          console.log("Account changed. Reloading...");
+          clearAppState();
+          connectWallet(); // Reconnect with the new account
+        }
+      };
+
+      const handleNetworkChange = () => {
+        console.log("Network changed. Clearing app state...");
+        clearAppState();
+      };
+
+      window.ethereum.on("accountsChanged", handleAccountChange);
+      window.ethereum.on("chainChanged", handleNetworkChange);
+
+      return () => {
+        window.ethereum.removeListener("accountsChanged", handleAccountChange);
+        window.ethereum.removeListener("chainChanged", handleNetworkChange);
+      };
+    }
+  }, []);
 
   return (
     <div>
