@@ -6,6 +6,7 @@ import {
   verifyProvider,
   rejectProvider,
   isProviderVerified,
+  isProviderRejected,
 } from "../services/blockchain/contractService";
 import "../styles/AdminDashboard.css";
 
@@ -15,58 +16,88 @@ const AdminDashboard = () => {
   const [logs, setLogs] = useState([]);
   const [registeredProviders, setRegisteredProviders] = useState([]);
 
-  // Fetch providers and verification status when the component mounts
   useEffect(() => {
-    fetchRegisteredProviders();
+    const resetStateAndFetch = async () => {
+      // Clear persistent data
+      localStorage.clear();
+      sessionStorage.clear();
+  
+      // Clear the state
+      setRegisteredProviders([]);
+      setLogs([]);
+  
+      // Optionally log this reset operation
+      addLogOnce("Resetting application state.");
+  
+      // Fetch fresh data if necessary
+      await fetchRegisteredProviders();
+    };
+  
+    resetStateAndFetch();
   },);
-
+  
+  
   const fetchRegisteredProviders = async () => {
     try {
-      // Fetch registered providers from event logs
+      // Fetch registered providers from blockchain
       const providersFromEvents = await getProviderRegistryEvents();
+      console.log("Fetched providers from blockchain:", providersFromEvents);
   
-      // If no providers are found
       if (providersFromEvents.length === 0) {
-        if (registeredProviders.length === 0) {
-          // Log only once if no providers exist
-          if (!logs.some((log) => log.includes("No registered providers found."))) {
-            addLog("No registered providers found.");
-          }
+        console.log("No providers found. State is empty.");
+        if (registeredProviders.length > 0) {
+          setRegisteredProviders([]); // Reset state to an empty array
+          addLogOnce("No registered providers found.");
         }
         return;
       }
   
-      // Fetch verification and rejection status for each provider
+      // Fetch status (isVerified and isRejected) for each provider
       const providersWithStatus = await Promise.all(
         providersFromEvents.map(async (provider) => {
           const isVerified = await isProviderVerified(provider.address);
-          return { ...provider, isVerified };
+          const isRejected = await isProviderRejected(provider.address); // Fetch isRejected from contract
+          let status;
+  
+          // Determine the provider's status
+          if (isRejected) {
+            status = "Rejected";
+          } else if (isVerified) {
+            status = "Verified";
+          } else {
+            status = "Not Verified";
+          }
+  
+          return { ...provider, isVerified, isRejected, status };
         })
       );
   
-      // Check if the list has changed before updating state
-      if (
-        JSON.stringify(providersWithStatus) !== JSON.stringify(registeredProviders)
-      ) {
+      // Update state only if there are changes
+      const hasChanged =
+        JSON.stringify(providersWithStatus) !== JSON.stringify(registeredProviders);
+  
+      if (hasChanged) {
         setRegisteredProviders(providersWithStatus);
-        addLog("Fetched registered providers successfully.");
+        addLogOnce("Fetched registered providers successfully.");
       } else {
-        // Log "No new providers found" only once
-        if (!logs.some((log) => log.includes("No new providers found."))) {
-          addLog("No new providers found.");
-        }
+        addLogOnce("No changes detected in registered providers.");
       }
     } catch (error) {
       console.error("Error fetching registered providers:", error);
-      addLog("Error fetching registered providers.");
+      addLogOnce("Error fetching registered providers.");
     }
   };
   
+  const addLogOnce = (message) => {
+    const timestampedMessage = `[${new Date().toLocaleString()}] ${message}`;
+    if (!logs.includes(timestampedMessage)) {
+      setLogs((prevLogs) => [...prevLogs, timestampedMessage]);
+    }
+  };
   
-  
-
   const handleVerifyProvider = async (address) => {
     try {
+      console.log(`Attempting to verify provider at address: ${address}`);
       const success = await verifyProvider(address);
       if (success) {
         addLog(`Provider ${address} verified successfully.`);
@@ -85,10 +116,12 @@ const AdminDashboard = () => {
 
   const handleRejectProvider = async (address) => {
     try {
+      console.log(`Attempting to reject provider at address: ${address}`);
       const success = await rejectProvider(address);
+  
       if (success) {
         addLog(`Provider ${address} rejected successfully.`);
-        fetchRegisteredProviders(); // Refresh the provider list
+        await fetchRegisteredProviders(); // Refresh the provider list
         alert(`Provider ${address} has been rejected.`);
       } else {
         addLog(`Failed to reject provider: ${address}.`);
@@ -100,6 +133,7 @@ const AdminDashboard = () => {
       alert("An error occurred while rejecting the provider.");
     }
   };
+  
 
   const addLog = (message) => {
     const timestamp = new Date().toLocaleString();
@@ -135,13 +169,15 @@ const AdminDashboard = () => {
                   <strong>Address:</strong> {provider.address} <br />
                   <strong>CID:</strong> {provider.dataCID} <br />
                   <strong>Status:</strong>{" "}
-                  {provider.isVerified ? (
+                  {provider.status === "Rejected" ? (
+                    <span className="admin-dashboard-rejected">Rejected</span>
+                  ) : provider.status === "Verified" ? (
                     <span className="admin-dashboard-verified">Verified</span>
                   ) : (
                     <span className="admin-dashboard-not-verified">Not Verified</span>
                   )}
                 </p>
-                {!provider.isVerified && (
+                {provider.status === "Not Verified" && (
                   <div className="admin-dashboard-actions">
                     <button
                       onClick={() => handleVerifyProvider(provider.address)}
