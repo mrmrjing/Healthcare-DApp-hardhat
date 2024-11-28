@@ -11,19 +11,14 @@ import { AuthContext } from "./contexts/AuthContext";
 function App() {
   const { authState, setAuthState } = useContext(AuthContext);
 
-  // Clear state and storage on app load
   useEffect(() => {
-    const clearPersistentData = () => {
-      localStorage.clear(); // Clear all local storage
-      setAuthState({
-        isAuthenticated: false,
-        userRole: null,
-        userAddress: null,
-      });
-    };
-
-    clearPersistentData();
+    // Only clear localStorage if explicitly needed (e.g., logout)
+    const storedAuthState = JSON.parse(localStorage.getItem("authState"));
+    if (storedAuthState) {
+      setAuthState(storedAuthState); // Restore previous auth state
+    }
   }, [setAuthState]);
+  
 
   // ProtectedRoute Logic
   const ProtectedRoute = ({ children, requiredRole }) => {
