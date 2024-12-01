@@ -14,44 +14,36 @@ const WalletConnect = () => {
   const connectWallet = async () => {
     if (window.ethereum) {
       try {
-        // Clear any existing app state
-        clearAppState();
-
-        // Request wallet connection
-        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-        const userAddress = accounts[0];
-        const userRole = await fetchUserRole(userAddress);
-
-        // Handle different roles
-        if (userRole === "doctor") {
-          setAuthState({
-            isAuthenticated: true,
-            userRole: "doctor",
-            userAddress,
-          });
-          alert("You are connected as a doctor.");
-          window.location.href = "/doctor/dashboard";
-        } else if (userRole === "patient") {
-          setAuthState({
-            isAuthenticated: true,
-            userRole: "patient",
-            userAddress,
-          });
-          alert("You are connected as a patient.");
-          window.location.href = "/patient/dashboard";
-        } else if (userRole === "unverified") {
-          alert("Provider is registered but not verified. Please contact the admin for verification.");
-        } else {
-          setRoleMessage("User is not registered as a provider or patient.");
+        const accounts = await window.ethereum.request({
+          method: "eth_requestAccounts",
+        });
+        if (accounts.length > 0) {
+          const userAddress = accounts[0];
+          const userRole = await fetchUserRole(userAddress);
+  
+          if (userRole) {
+            setAuthState({
+              isAuthenticated: true,
+              userRole,
+              userAddress,
+            });
+  
+            // Redirect based on user role
+            if (userRole === "doctor") {
+              window.location.href = "/doctor/request-access";
+            } else if (userRole === "patient") {
+              window.location.href = "/patient/dashboard";
+            }
+          }
         }
       } catch (error) {
         console.error("Error connecting wallet:", error);
-        alert("Failed to connect wallet. Please try again.");
       }
     } else {
-      alert("MetaMask not detected. Please install MetaMask.");
+      alert("Please install a MetaMask wallet to interact!");
     }
   };
+  
 
   // Fetch user role based on wallet address
   const fetchUserRole = async (address) => {
