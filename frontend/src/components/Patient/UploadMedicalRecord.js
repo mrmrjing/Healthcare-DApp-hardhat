@@ -11,6 +11,7 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
   const [encryptionKey, setEncryptionKey] = useState(""); // Generated encryption key
+  const [masterPassword, setMasterPassword] = useState(""); // Master password for encryption key storage
 
   // Generate encryption key
   const generateEncryptionKey = () => {
@@ -34,6 +35,11 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
       return;
     }
 
+    if (!masterPassword) {
+      setError("Please enter your master password to store the encryption key.");
+      return;
+    }
+
     setError(null);
     setIsUploading(true);
 
@@ -43,7 +49,11 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
 
       // Create a systematic file name
       const now = new Date();
-      const fileName = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}_${file.name}`;
+      const fileName = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+        now.getDate()
+      ).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(
+        now.getMinutes()
+      ).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}_${file.name}`;
 
       // Define MFS path
       const mfsPath = `/medical-records/${fileName}`;
@@ -57,13 +67,17 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
 
       console.log("File uploaded to IPFS, CID:", cid);
 
+      // Store the encryption key securely with the CID as the identifier
+      storeEncryptionKey(cid, encryptionKey, masterPassword);
+
       // Upload CID to blockchain
       await uploadMedicalRecord(patientAddress, cid);
 
       console.log("Medical record stored on blockchain.");
       setFile(null);
       setEncryptionKey("");
-      if (onUploadSuccess) onUploadSuccess(); 
+      setMasterPassword("");
+      if (onUploadSuccess) onUploadSuccess();
     } catch (err) {
       console.error("Error uploading medical record:", err);
       setError("Failed to upload medical record. Please try again.");
@@ -80,7 +94,7 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
           const fileData = new Uint8Array(reader.result); // Convert ArrayBuffer to Uint8Array
           const wordArray = CryptoJS.lib.WordArray.create(fileData); // Create WordArray from Uint8Array
           const encrypted = CryptoJS.AES.encrypt(wordArray, key).toString(); // Encrypt file data
-  
+
           // Convert the encrypted string back to binary format (ArrayBuffer)
           const encryptedBuffer = new TextEncoder().encode(encrypted); // Encrypted binary data
           resolve(encryptedBuffer); // Pass binary data to IPFS
@@ -92,9 +106,22 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
       reader.readAsArrayBuffer(file); // Read file as ArrayBuffer
     });
   };
-  
-  
-  
+
+  // Function to store the encryption key securely
+  const storeEncryptionKey = (cid, key, password) => {
+    // Encrypt the key with the master password
+    const encryptedKey = CryptoJS.AES.encrypt(key, password).toString();
+
+    // Retrieve existing keys from localStorage
+    const storedKeys = localStorage.getItem("encryptionKeys");
+    let encryptionKeys = storedKeys ? JSON.parse(storedKeys) : {};
+
+    // Store the encrypted key with the CID as the identifier
+    encryptionKeys[cid] = encryptedKey;
+
+    // Save back to localStorage
+    localStorage.setItem("encryptionKeys", JSON.stringify(encryptionKeys));
+  };
 
   return (
     <div className="upload-container">
@@ -120,7 +147,24 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
         )}
       </div>
       <div>
-        <button onClick={handleUpload} disabled={isUploading || !encryptionKey}>
+        <label>Master Password:</label>
+        <input
+          type="password"
+          value={masterPassword}
+          onChange={(e) => setMasterPassword(e.target.value)}
+          disabled={isUploading}
+        />
+        <p>
+          <em>
+            Your master password is used to securely store your encryption keys.
+          </em>
+        </p>
+      </div>
+      <div>
+        <button
+          onClick={handleUpload}
+          disabled={isUploading || !encryptionKey || !masterPassword}
+        >
           {isUploading ? "Uploading..." : "Upload"}
         </button>
       </div>
