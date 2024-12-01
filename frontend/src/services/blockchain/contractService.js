@@ -76,7 +76,6 @@ export const requestAccess = async (patientAddress, plainTextPurpose) => {
     console.log("Calling requestAccess on blockchain with:");
     console.log("Patient Address:", patientAddress);
     console.log("Plain Text Purpose:", plainTextPurpose);
-    console.log("Type of Purpose (Raw):", typeof plainTextPurpose);
 
     const tx = await accessControl.requestAccess(patientAddress, plainTextPurpose);
     // const tx = await accessControl.requestAccess(patientAddress, "Medical History Access");
@@ -91,14 +90,14 @@ export const requestAccess = async (patientAddress, plainTextPurpose) => {
 };
 
 // Enables a registered patient to approve access for a provider.
-export const approveAccess = async (providerAddress, encryptedKey) => {
+export const approveAccess = async (providerAddress, encryptedKey, cid) => {
   try {
     const accessControl = await getContract("accessControl");
 
     // Pass the encryptedKey to the smart contract
-    const tx = await accessControl.approveAccess(providerAddress, encryptedKey);
+    const tx = await accessControl.approveAccess(providerAddress, encryptedKey, cid);
     await tx.wait();
-    console.log("Access approved with encrypted key.");
+    console.log("Access approved with encrypted key and CID.");
   } catch (error) {
     console.error("Error approving access:", error);
     throw error;
@@ -473,7 +472,7 @@ export const fetchPendingRequests = async (patientAddress) => {
       console.log(`[DEBUG] Event ${index} raw data:`, event);
 
       // Extract event arguments
-      const { providerAddress, purposeHash, plainTextPurpose } = event.args;
+      const { providerAddress, purposeHash, plainTextPurpose, cid } = event.args;
 
       console.log(`[DEBUG] Event ${index} - Provider Address:`, providerAddress);
       console.log(`[DEBUG] Event ${index} - Purpose Hash:`, purposeHash);
@@ -484,6 +483,7 @@ export const fetchPendingRequests = async (patientAddress) => {
         doctorAddress: providerAddress,
         purposeHash,
         plainTextPurpose: plainTextPurpose || "Purpose not available", 
+        cid,
       };
     });
 
