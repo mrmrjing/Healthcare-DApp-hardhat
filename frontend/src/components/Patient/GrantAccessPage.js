@@ -63,64 +63,66 @@ const GrantAccessPage = ({ patientAddress }) => {
 
   const handleApprove = async (request, index) => {
     try {
-      console.log("Approving request:", request);
+      console.log("[DEBUG] Approve request initiated for:", request);
       const selectedCIDsForRequest = selectedCIDs[index];
       if (!selectedCIDsForRequest || selectedCIDsForRequest.length === 0) {
+        console.warn("[WARN] No CIDs selected for request at index:", index);
         setMessage("Please select at least one CID.");
         return;
       }
+      console.log("[DEBUG] Selected CIDs for approval:", selectedCIDsForRequest);
   
       const publicKeyBytes = await getProviderPublicKey(request.doctorAddress);
+      console.log("[DEBUG] Raw provider public key bytes:", publicKeyBytes);
+
       const publicKeyHex = hexlify(publicKeyBytes).substring(2);
-      console.log("Provider Public Key (Hex):", publicKeyHex);
+      console.log("[DEBUG] Provider Public Key (Hex):", publicKeyHex);
   
       const doctorPublicKey = ec.keyFromPublic(publicKeyHex, "hex");
-      console.log("Derived Doctor Public Key:", doctorPublicKey);
+      console.log("[DEBUG] Derived Doctor Public Key:", doctorPublicKey);
+      
   
       const patientEphemeralKeyPair = ec.genKeyPair();
-      const sharedSecret = patientEphemeralKeyPair.derive(doctorPublicKey.getPublic());
-      console.log("Shared Secret:", sharedSecret.toString(16));
+      const ephemeralPublicKey = patientEphemeralKeyPair.getPublic("hex");
+      console.log("[DEBUG] Generated Patient Ephemeral Public Key:", ephemeralPublicKey);
   
-      const aesKey = CryptoJS.SHA256(sharedSecret.toString(16)).toString();
-      console.log("Generated AES Key:", aesKey);
+      const sharedSecret = patientEphemeralKeyPair.derive(doctorPublicKey.getPublic());
+      console.log("[DEBUG] Derived Shared Secret (Encryption Side):", sharedSecret.toString(16));
+  
+      const aesKey = sharedSecret.toString(16);
+      console.log("[DEBUG] AES Key derived from shared secret:", aesKey);
   
       const encryptedSymmetricKey = CryptoJS.AES.encrypt(
         JSON.stringify(selectedCIDsForRequest),
         aesKey
       ).toString();
-      console.log("Encrypted Symmetric Key:", encryptedSymmetricKey);
+      console.log("[DEBUG] Encrypted Symmetric Key:", encryptedSymmetricKey);
   
       const encryptedKeyObject = {
-        ephemeralPublicKey: patientEphemeralKeyPair.getPublic("hex"),
+        ephemeralPublicKey, // Include the ephemeral public key
         encryptedSymmetricKey,
         cids: selectedCIDsForRequest,
       };
+      console.log("[DEBUG] Encrypted Key Object Created:", encryptedKeyObject);
+  
       const encryptedKeyJSON = JSON.stringify(encryptedKeyObject);
-      if (!encryptedKeyJSON) {
-        console.error("Error: Encrypted Key Object is empty or undefined.");
-        return;
-      }
-      console.log("Encrypted Key Object (JSON):", encryptedKeyJSON);
-
-      // Convert the encrypted key object to bytes
+      console.log("[DEBUG] Encrypted Key Object (JSON String):", encryptedKeyJSON);
+  
       const encryptedKeyBytes = toUtf8Bytes(encryptedKeyJSON);
-      if (encryptedKeyBytes.length === 0) {
-        console.error("Error: Encrypted Key Object converted to empty bytes.");
-        return;
-      }
-      console.log("Encrypted Key Object (Bytes):", encryptedKeyBytes);
-      
-
+      console.log("[DEBUG] Encrypted Key Object (Bytes):", encryptedKeyBytes);
+  
       await approveAccess(request.doctorAddress, encryptedKeyBytes, selectedCIDsForRequest.join(","));
-      console.log("Access approved for doctor:", request.doctorAddress);
+      console.log("[DEBUG] Access approved for doctor:", request.doctorAddress);
   
       setAccessRequests((prev) => prev.filter((_, i) => i !== index));
       setMessage("Access approved successfully.");
     } catch (error) {
-      console.error("Error in handleApprove:", error);
+      console.error("[ERROR] Error in handleApprove:", error);
       setMessage("Failed to approve access.");
     }
   };
+  
+  
   
 
   const handleRevoke = async (doctorAddress) => {
