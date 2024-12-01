@@ -57,20 +57,32 @@ export const AuthProvider = ({ children }) => {
 
     autoConnectWallet();
 
-    const handleAccountsChanged = (accounts) => {
+    const handleAccountsChanged = async (accounts) => {
       if (accounts.length > 0) {
         const userAddress = accounts[0];
-        fetchUserRole(userAddress).then((role) => {
+        const userRole = await fetchUserRole(userAddress);
+    
+        if (userRole) {
           setAuthState({
-            isAuthenticated: !!role,
-            userRole: role,
+            isAuthenticated: true,
+            userRole,
             userAddress,
           });
-        });
+    
+          // Redirect based on user role
+          if (userRole === "doctor") {
+            window.location.href = "/doctor/request-access"; // Redirect doctors
+          } else if (userRole === "patient") {
+            window.location.href = "/patient/dashboard"; // Redirect patients
+          }
+        } else {
+          // Log out if the address doesn't match any role
+          logout();
+        }
       } else {
-        logout();
+        logout(); // Log out if no accounts available
       }
-    };
+    };    
 
     if (window.ethereum) {
       window.ethereum.on("accountsChanged", handleAccountsChanged);
