@@ -2,22 +2,25 @@ import React, { useEffect, useState } from "react";
 import {
   approveAccess,
   revokeAccess,
-  fetchPendingRequests, // Import the fetchPendingRequests function
+  fetchPendingRequests,
   getProviderPublicKey,
+  getMyMedicalRecords,
 } from "../../services/blockchain/contractService";
 import CryptoJS from "crypto-js";
 import { ec as EC } from "elliptic";
-import { hexlify } from "ethers";
+import { hexlify, toUtf8Bytes } from "ethers";
 
 // Initialize elliptic curve for secp256k1 (Ethereum's curve)
 const ec = new EC("secp256k1");
 
 const GrantAccessPage = ({ patientAddress }) => {
   const [accessRequests, setAccessRequests] = useState([]);
+  const [medicalRecords, setMedicalRecords] = useState([]);
+  const [selectedCIDs, setSelectedCIDs] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState("");
-  const [masterPassword, setMasterPassword] = useState(""); // Master password to decrypt encryption keys
+  const [masterPassword, setMasterPassword] = useState("");
 
   console.log("[DEBUG] Patient Address prop received:", patientAddress);
 
@@ -27,20 +30,17 @@ const GrantAccessPage = ({ patientAddress }) => {
         console.log("Loading access requests for patient:", patientAddress);
 
         setLoading(true);
-        const requests = await fetchPendingRequests(patientAddress); // Call the fetchPendingRequests function
+        const requests = await fetchPendingRequests(patientAddress);
+        const records = await getMyMedicalRecords(); // Fetch medical records
 
         console.log("Fetched pending access requests:", requests);
+        console.log("Fetched medical records:", records);
 
-        if (!requests || requests.length === 0) {
-          console.log("No pending access requests found.");
-          setAccessRequests([]);
-        } else {
-          console.log("Setting access requests state with:", requests);
-          setAccessRequests(requests);
-        }
+        setAccessRequests(requests || []);
+        setMedicalRecords(records || []);
       } catch (err) {
-        console.error("Error fetching access requests:", err);
-        setError("Failed to load access requests.");
+        console.error("Error fetching access requests or medical records:", err);
+        setError("Failed to load access requests or medical records.");
       } finally {
         setLoading(false);
       }
@@ -53,92 +53,75 @@ const GrantAccessPage = ({ patientAddress }) => {
     }
   }, [patientAddress]);
 
-  const handleApprove = async (request) => {
+  const handleCIDSelection = (event, requestIndex) => {
+    const selectedOptions = Array.from(event.target.selectedOptions).map((opt) => opt.value);
+    setSelectedCIDs((prev) => ({
+      ...prev,
+      [requestIndex]: selectedOptions,
+    }));
+  };
+
+  const handleApprove = async (request, index) => {
     try {
-      console.log("Approving access for request:", request);
-
-      // Retrieve doctor's public key
-      const publicKeyBytes = await getProviderPublicKey(request.doctorAddress);
-      console.log("Retrieved doctor's public key:", publicKeyBytes);
-
-      const publicKeyHex = hexlify(publicKeyBytes).substring(2);
-      const doctorPublicKey = ec.keyFromPublic(publicKeyHex, "hex");
-
-      // Retrieve encryption key for the medical record
-      const encryptionKey = retrieveEncryptionKey(request.cid, masterPassword);
-
-      if (!encryptionKey) {
-        console.error("Failed to retrieve encryption key for CID:", request.cid);
-        setMessage("Failed to retrieve encryption key. Check master password.");
+      console.log("Approving request:", request);
+      const selectedCIDsForRequest = selectedCIDs[index];
+      if (!selectedCIDsForRequest || selectedCIDsForRequest.length === 0) {
+        setMessage("Please select at least one CID.");
         return;
       }
-
-      console.log("Retrieved encryption key for CID:", request.cid);
-
-      // Generate ephemeral key pair for secure key exchange
+  
+      const publicKeyBytes = await getProviderPublicKey(request.doctorAddress);
+      const publicKeyHex = hexlify(publicKeyBytes).substring(2);
+      console.log("Provider Public Key (Hex):", publicKeyHex);
+  
+      const doctorPublicKey = ec.keyFromPublic(publicKeyHex, "hex");
+      console.log("Derived Doctor Public Key:", doctorPublicKey);
+  
       const patientEphemeralKeyPair = ec.genKeyPair();
-      const sharedSecret = patientEphemeralKeyPair.derive(
-        doctorPublicKey.getPublic()
-      );
+      const sharedSecret = patientEphemeralKeyPair.derive(doctorPublicKey.getPublic());
+      console.log("Shared Secret:", sharedSecret.toString(16));
+  
       const aesKey = CryptoJS.SHA256(sharedSecret.toString(16)).toString();
-
-      console.log("Generated AES key for encryption.");
-
-      // Encrypt the encryption key
+      console.log("Generated AES Key:", aesKey);
+  
       const encryptedSymmetricKey = CryptoJS.AES.encrypt(
-        encryptionKey,
+        JSON.stringify(selectedCIDsForRequest),
         aesKey
       ).toString();
-
+      console.log("Encrypted Symmetric Key:", encryptedSymmetricKey);
+  
       const encryptedKeyObject = {
         ephemeralPublicKey: patientEphemeralKeyPair.getPublic("hex"),
         encryptedSymmetricKey,
-        cid: request.cid,
+        cids: selectedCIDsForRequest,
       };
-
       const encryptedKeyJSON = JSON.stringify(encryptedKeyObject);
+      if (!encryptedKeyJSON) {
+        console.error("Error: Encrypted Key Object is empty or undefined.");
+        return;
+      }
+      console.log("Encrypted Key Object (JSON):", encryptedKeyJSON);
 
-      console.log("Encrypted key object:", encryptedKeyJSON);
+      // Convert the encrypted key object to bytes
+      const encryptedKeyBytes = toUtf8Bytes(encryptedKeyJSON);
+      if (encryptedKeyBytes.length === 0) {
+        console.error("Error: Encrypted Key Object converted to empty bytes.");
+        return;
+      }
+      console.log("Encrypted Key Object (Bytes):", encryptedKeyBytes);
+      
 
-      // Approve access via blockchain
-      await approveAccess(request.doctorAddress, encryptedKeyJSON);
-
-      console.log("Access approved successfully on blockchain.");
-
-      setAccessRequests((prev) =>
-        prev.filter((req) => req.doctorAddress !== request.doctorAddress)
-      );
+      await approveAccess(request.doctorAddress, encryptedKeyBytes, selectedCIDsForRequest.join(","));
+      console.log("Access approved for doctor:", request.doctorAddress);
+  
+      setAccessRequests((prev) => prev.filter((_, i) => i !== index));
       setMessage("Access approved successfully.");
     } catch (error) {
-      console.error("Error approving access:", error);
+      console.error("Error in handleApprove:", error);
       setMessage("Failed to approve access.");
     }
   };
-
-  const retrieveEncryptionKey = (cid, password) => {
-    const storedKeys = localStorage.getItem("encryptionKeys");
-    if (!storedKeys) {
-      console.warn("No encryption keys found in localStorage.");
-      return null;
-    }
-
-    const encryptionKeys = JSON.parse(storedKeys);
-    const encryptedKey = encryptionKeys[cid];
-
-    if (!encryptedKey) {
-      console.warn("No encryption key found for CID:", cid);
-      return null;
-    }
-
-    try {
-      const bytes = CryptoJS.AES.decrypt(encryptedKey, password);
-      const decryptedKey = bytes.toString(CryptoJS.enc.Utf8);
-      return decryptedKey;
-    } catch (error) {
-      console.error("Error decrypting encryption key for CID:", cid, error);
-      return null;
-    }
-  };
+  
 
   const handleRevoke = async (doctorAddress) => {
     try {
@@ -185,6 +168,7 @@ const GrantAccessPage = ({ patientAddress }) => {
             <tr>
               <th>Doctor Address</th>
               <th>Purpose</th>
+              <th>Select Medical Records (CIDs)</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -194,8 +178,20 @@ const GrantAccessPage = ({ patientAddress }) => {
                 <td>{request.doctorAddress}</td>
                 <td>{request.plainTextPurpose}</td>
                 <td>
+                  <select
+                    multiple
+                    onChange={(e) => handleCIDSelection(e, index)}
+                  >
+                    {medicalRecords.map((record, i) => (
+                      <option key={i} value={record.encryptedCID}>
+                        {record.encryptedCID}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>
                   <button
-                    onClick={() => handleApprove(request)}
+                    onClick={() => handleApprove(request, index)}
                     className="approve-button"
                   >
                     Approve
