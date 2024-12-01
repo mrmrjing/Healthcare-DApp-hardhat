@@ -1,4 +1,9 @@
-import { BrowserProvider, Contract } from "ethers";
+import {
+  BrowserProvider,
+  Contract,
+  toUtf8Bytes,
+  toUtf8String, 
+} from "ethers";
 import deployedAddresses from "../../artifacts/deployedAddresses.json";
 import AccessControlABI from "../../artifacts/contracts/AccessControl.sol/AccessControl.json";
 import HealthcareProviderRegistryABI from "../../artifacts/contracts/HealthcareProviderRegistry.sol/HealthcareProviderRegistry.json";
@@ -16,7 +21,9 @@ const CONTRACT_ADDRESSES = {
 // Get the provider wrapping MetaMask's window.ethereum
 const getProvider = async () => {
   if (typeof window.ethereum === "undefined") {
-      throw new Error("MetaMask is not installed. Please install MetaMask to use this application.");
+    throw new Error(
+      "MetaMask is not installed. Please install MetaMask to use this application."
+    );
   }
 
   // Create a new BrowserProvider
@@ -59,61 +66,78 @@ export const getContract = async (contractName) => {
   return new Contract(address, abi, signer); // Use signer for write-enabled interactions
 };
 
-
 // Core functions to interact with the blockchain
 
 // Allows a verified provider to request access to a patient’s data.
-export const requestAccess = async (patientAddress, purposeHash) => {
-    try {
-      const accessControl = await getContract("accessControl");
-      const tx = await accessControl.requestAccess(patientAddress, purposeHash);
-      await tx.wait();
-      console.log("Access request sent.");
-    } catch (error) {
-      console.error("Error requesting access:", error);
-    }
-  };
-  
-// Enables a registered patient to approve access for a provider.
-export const approveAccess = async (providerAddress) => {
+export const requestAccess = async (patientAddress, plainTextPurpose) => {
   try {
     const accessControl = await getContract("accessControl");
-    const tx = await accessControl.approveAccess(providerAddress);
+
+    console.log("Calling requestAccess on blockchain with:");
+    console.log("Patient Address:", patientAddress);
+    console.log("Plain Text Purpose:", plainTextPurpose);
+    console.log("Type of Purpose (Raw):", typeof plainTextPurpose);
+
+    const tx = await accessControl.requestAccess(patientAddress, plainTextPurpose);
+    // const tx = await accessControl.requestAccess(patientAddress, "Medical History Access");
+
     await tx.wait();
-    console.log("Access approved.");
+
+    console.log("Access request sent successfully.");
+  } catch (error) {
+    console.error("[ERROR] Error requesting access:", error);
+    throw error;
+  }
+};
+
+// Enables a registered patient to approve access for a provider.
+export const approveAccess = async (providerAddress, encryptedKey) => {
+  try {
+    const accessControl = await getContract("accessControl");
+
+    // Pass the encryptedKey to the smart contract
+    const tx = await accessControl.approveAccess(providerAddress, encryptedKey);
+    await tx.wait();
+    console.log("Access approved with encrypted key.");
   } catch (error) {
     console.error("Error approving access:", error);
+    throw error;
   }
 };
 
 // Allows a registered patient to revoke access from a provider.
 export const revokeAccess = async (providerAddress) => {
-    try {
-      const accessControl = await getContract("accessControl");
-      const tx = await accessControl.revokeAccess(providerAddress);
-      await tx.wait();
-      console.log("Access revoked.");
-    } catch (error) {
-      console.error("Error revoking access:", error);
-    }
-  };
+  try {
+    const accessControl = await getContract("accessControl");
+    const tx = await accessControl.revokeAccess(providerAddress);
+    await tx.wait();
+    console.log("Access revoked.");
+  } catch (error) {
+    console.error("Error revoking access:", error);
+  }
+};
 
 // Checks if a provider has access to a patient's data.
 export const checkAccess = async (patientAddress, providerAddress) => {
-    try {
-      const accessControl = await getContract("accessControl");
-      const hasAccess = await accessControl.checkAccess(patientAddress, providerAddress);
-      return hasAccess;
-    } catch (error) {
-      console.error("Error checking access:", error);
-    }
-  };
+  try {
+    const accessControl = await getContract("accessControl");
+    const hasAccess = await accessControl.checkAccess(
+      patientAddress,
+      providerAddress
+    );
+    return hasAccess;
+  } catch (error) {
+    console.error("Error checking access:", error);
+  }
+};
 
 // Allows a provider to register themselves with a data CID.
-export const registerProvider = async (dataCID) => {
+export const registerProvider = async (dataCID, publicKeyBytes) => {
   try {
     const registry = await getContract("healthcareProviderRegistry");
-    const tx = await registry.registerHealthcareProvider(dataCID);
+
+    // Pass both dataCID and publicKeyBytes to the contract method
+    const tx = await registry.registerHealthcareProvider(dataCID, publicKeyBytes);
     await tx.wait(); // Wait for transaction confirmation
     console.log("Provider registered successfully.");
     return tx; // Return the transaction receipt for further processing
@@ -126,62 +150,123 @@ export const registerProvider = async (dataCID) => {
 
 // Enables the admin to verify a registered provider.
 export const verifyProvider = async (providerAddress) => {
-    try {
-      const registry = await getContract("healthcareProviderRegistry");
-      const tx = await registry.verifyHealthcareProvider(providerAddress);
-      await tx.wait();
-      console.log("Provider verified.");
-      return true; // Return true on success
-    } catch (error) {
-      console.error("Error verifying provider:", error);
-      return false; // Return false on failure
-    }
-  };
+  try {
+    const registry = await getContract("healthcareProviderRegistry");
+    const tx = await registry.verifyHealthcareProvider(providerAddress);
+    await tx.wait();
+    console.log("Provider verified.");
+    return true; // Return true on success
+  } catch (error) {
+    console.error("Error verifying provider:", error);
+    return false; // Return false on failure
+  }
+};
 
 // Checks if a provider is verified.
 export const isProviderVerified = async (providerAddress) => {
-    try {
-      const registry = await getContract("healthcareProviderRegistry");
-      const isVerified = await registry.isProviderVerified(providerAddress);
-      return isVerified;
-    } catch (error) {
-      console.error("Error checking provider verification:", error);
-    }
-  };
+  try {
+    const registry = await getContract("healthcareProviderRegistry");
+    const isVerified = await registry.isProviderVerified(providerAddress);
+    return isVerified;
+  } catch (error) {
+    console.error("Error checking provider verification:", error);
+  }
+};
 
 // Allows authorized users to upload a medical record for a patient.
 export const uploadMedicalRecord = async (patientAddress, encryptedCID) => {
-    try {
-      const medicalRecords = await getContract("medicalRecords");
-      const tx = await medicalRecords.uploadMedicalRecord(patientAddress, encryptedCID);
-      await tx.wait();
-      console.log("Medical record uploaded.");
-    } catch (error) {
-      console.error("Error uploading medical record:", error);
-    }
-  };
+  try {
+    const medicalRecords = await getContract("medicalRecords");
+
+    // Ensure CID is correctly encoded
+    const encodedCID = encodeCID(encryptedCID);
+    const tx = await medicalRecords.uploadMedicalRecord(
+      patientAddress,
+      encodedCID
+    );
+    await tx.wait();
+    console.log("Medical record uploaded.");
+  } catch (error) {
+    console.error("Error uploading medical record:", error);
+  }
+};
 
 // Fetches all medical records for the calling patient.
 export const getMyMedicalRecords = async () => {
-    try {
-      const medicalRecords = await getContract("medicalRecords");
-      const records = await medicalRecords.getMedicalRecords();
-      return records;
-    } catch (error) {
-      console.error("Error fetching medical records:", error);
-    }
-  };
+  try {
+    const medicalRecords = await getContract("medicalRecords");
+    const records = await medicalRecords.getMedicalRecords();
+
+    return records.map((record) => {
+      let timestamp;
+
+      if (typeof record.timestamp === "bigint") {
+        timestamp = Number(record.timestamp); // Convert BigInt to Number
+      } else if (record.timestamp && typeof record.timestamp.toNumber === "function") {
+        timestamp = record.timestamp.toNumber();
+      } else if (typeof record.timestamp === "string" || typeof record.timestamp === "number") {
+        timestamp = Number(record.timestamp);
+      } else {
+        console.error("Unexpected timestamp format:", record.timestamp);
+        throw new Error("Unexpected timestamp format");
+      }
+
+      return {
+        encryptedCID: decodeCID(record.encryptedCID),
+        timestamp: new Date(timestamp * 1000).toLocaleString(),
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching medical records:", error.message);
+    return [];
+  }
+};
 
 // Fetches all medical records for a specific patient, if authorized.
 export const getPatientRecords = async (patientAddress) => {
-    try {
-      const medicalRecords = await getContract("medicalRecords");
-      const records = await medicalRecords.getPatientRecords(patientAddress);
-      return records;
-    } catch (error) {
-      console.error("Error fetching patient records:", error);
+  try {
+    const medicalRecords = await getContract("medicalRecords");
+    const records = await medicalRecords.getPatientRecords(patientAddress);
+
+    return records.map((record) => ({
+      encryptedCID: decodeCID(record.encryptedCID),
+      timestamp: new Date(record.timestamp.toNumber() * 1000).toLocaleString(),
+    }));
+  } catch (error) {
+    console.error("Error fetching patient records:", error.message);
+    return [];
+  }
+};
+
+// Helper: Convert a string CID to bytes
+const encodeCID = (cid) => {
+  if (typeof cid !== "string") {
+    throw new Error("CID must be a string.");
+  }
+  return toUtf8Bytes(cid); // Use ethers' toUtf8Bytes
+};
+
+// Helper: Convert bytes back to a string CID
+const decodeCID = (bytes) => {
+  try {
+    if (typeof bytes === "string") {
+      // If already a valid string, return it as-is
+      return bytes;
+    } else if (bytes instanceof Uint8Array || bytes instanceof ArrayBuffer) {
+      // Handle Uint8Array or ArrayBuffer
+      const decoder = new TextDecoder();
+      return decoder.decode(new Uint8Array(bytes));
+    } else if (typeof bytes === "string" && bytes.startsWith("0x")) {
+      // Handle hex strings
+      return toUtf8String(bytes);
+    } else {
+      throw new Error("Unsupported CID format");
     }
-  };
+  } catch (error) {
+    console.error("Error decoding CID:", error);
+    throw error;
+  }
+};
 
 // Allows a user to register as a patient with their data CID.
 export const registerPatient = async (dataCID) => {
@@ -198,43 +283,45 @@ export const registerPatient = async (dataCID) => {
   }
 };
 
-
 // Enables a patient to grant access to their data to a provider.
 export const grantAccessToProvider = async (providerAddress) => {
-    try {
-      const patientRegistry = await getContract("patientRegistry");
-      const tx = await patientRegistry.grantAccess(providerAddress);
-      await tx.wait();
-      console.log("Access granted to provider.");
-    } catch (error) {
-      console.error("Error granting access:", error);
-    }
-  };
+  try {
+    const patientRegistry = await getContract("patientRegistry");
+    const tx = await patientRegistry.grantAccess(providerAddress);
+    await tx.wait();
+    console.log("Access granted to provider.");
+  } catch (error) {
+    console.error("Error granting access:", error);
+  }
+};
 
 // Allows a patient to revoke access from a provider.
 export const revokeAccessFromProvider = async (providerAddress) => {
-    try {
-      const patientRegistry = await getContract("patientRegistry");
-      const tx = await patientRegistry.revokeAccess(providerAddress);
-      await tx.wait();
-      console.log("Access revoked from provider.");
-    } catch (error) {
-      console.error("Error revoking access:", error);
-    }
-  };
+  try {
+    const patientRegistry = await getContract("patientRegistry");
+    const tx = await patientRegistry.revokeAccess(providerAddress);
+    await tx.wait();
+    console.log("Access revoked from provider.");
+  } catch (error) {
+    console.error("Error revoking access:", error);
+  }
+};
 
 // Checks if a provider is authorized for a specific patient.
 export const isAuthorized = async (patientAddress, providerAddress) => {
-    try {
-      const patientRegistry = await getContract("patientRegistry");
-      const isAuthorized = await patientRegistry.isAuthorized(patientAddress, providerAddress);
-      return isAuthorized;
-    } catch (error) {
-      console.error("Error checking authorization:", error);
-    }
-  };
-  
-// Checks if a provider is registered 
+  try {
+    const patientRegistry = await getContract("patientRegistry");
+    const isAuthorized = await patientRegistry.isAuthorized(
+      patientAddress,
+      providerAddress
+    );
+    return isAuthorized;
+  } catch (error) {
+    console.error("Error checking authorization:", error);
+  }
+};
+
+// Checks if a provider is registered
 export const isProviderRegistered = async (providerAddress) => {
   try {
     const registry = await getContract("healthcareProviderRegistry");
@@ -242,7 +329,7 @@ export const isProviderRegistered = async (providerAddress) => {
     return isRegistered;
   } catch (error) {
     console.error("Error checking provider registration:", error);
-    return false; 
+    return false;
   }
 };
 
@@ -254,7 +341,7 @@ export const isProviderRejected = async (providerAddress) => {
     return isRejected;
   } catch (error) {
     console.error("Error checking provider rejection:", error);
-    return false; 
+    return false;
   }
 };
 
@@ -262,11 +349,13 @@ export const isProviderRejected = async (providerAddress) => {
 export const isPatientRegistered = async (patientAddress) => {
   try {
     const patientRegistry = await getContract("patientRegistry");
-    const isRegistered = await patientRegistry.isPatientRegistered(patientAddress);
+    const isRegistered = await patientRegistry.isPatientRegistered(
+      patientAddress
+    );
     return isRegistered;
   } catch (error) {
     console.error("Error checking patient registration:", error);
-    return false; 
+    return false;
   }
 };
 
@@ -280,38 +369,48 @@ export const getAllProviders = async () => {
     console.error("Error fetching providers:", error);
     return [];
   }
-}
+};
 
 // Method to get the events emitted by the HealthcareProviderRegistry contract
 export const getProviderRegistryEvents = async () => {
   try {
-      const registry = await getContract("healthcareProviderRegistry");
+    const registry = await getContract("healthcareProviderRegistry");
 
-      // Fetch events for registered providers
-      const registeredFilter = registry.filters.ProviderRegistered();
-      const registeredEvents = await registry.queryFilter(registeredFilter, 0);
+    // Fetch events for registered providers
+    const registeredFilter = registry.filters.ProviderRegistered();
+    const registeredEvents = await registry.queryFilter(registeredFilter, 0);
 
-      // Fetch additional data (isVerified and isRejected) for each provider
-      const parsedEvents = await Promise.all(
-          registeredEvents.map(async (event) => {
-              const providerAddress = event.args.providerAddress;
+    // Parse event data
+    const parsedEvents = await Promise.all(
+      registeredEvents.map(async (event) => {
+        const providerAddress = event.args.providerAddress;
+        const rawDataCID = event.args.dataCID; // Should be a string
+        const publicKey = event.args.publicKey; // Public key as bytes or hex
 
-              const isRejected = await registry.isProviderRejected(providerAddress);
-              const isVerified = await registry.isProviderVerified(providerAddress);
+        console.log("Provider Address:", providerAddress);
+        console.log("Raw CID:", rawDataCID);
+        console.log("Public Key:", publicKey);
 
-              return {
-                  address: providerAddress,
-                  dataCID: event.args.dataCID,
-                  isRejected,
-                  isVerified,
-              };
-          })
-      );
+        // Decode CID only if necessary
+        const dataCID = typeof rawDataCID === "string" ? rawDataCID : decodeCID(rawDataCID);
 
-      return parsedEvents;
+        const isRejected = await registry.isProviderRejected(providerAddress);
+        const isVerified = await registry.isProviderVerified(providerAddress);
+
+        return {
+          address: providerAddress,
+          dataCID,
+          publicKey, // Include public key if needed
+          isRejected,
+          isVerified,
+        };
+      })
+    );
+
+    return parsedEvents;
   } catch (error) {
-      console.error("Error fetching provider registry events:", error);
-      return [];
+    console.error("Error fetching provider registry events:", error);
+    return [];
   }
 };
 
@@ -329,11 +428,75 @@ export const rejectProvider = async (providerAddress) => {
   }
 };
 
+// Method to get a provider's public key
+export const getProviderPublicKey = async (providerAddress) => {
+  try {
+    const registry = await getContract("healthcareProviderRegistry");
+    const publicKey = await registry.getProviderPublicKey(providerAddress);
+    return publicKey; 
+  } catch (error) {
+    console.error("Error fetching provider public key:", error);
+    throw error;
+  }
+};
+
+// Method to retrieve the encrypted key for a specific provider-patient pair 
+export const getEncryptedKey = async (providerAddress, patientAddress) => {
+  try {
+    const accessControl = await getContract("accessControl");
+
+    // Fetch the encrypted key from the blockchain
+    const encryptedKey = await accessControl.getEncryptedKey(providerAddress, patientAddress);
+    return encryptedKey; // Returns the encrypted key as a string
+  } catch (error) {
+    console.error("Error retrieving encrypted key from blockchain:", error);
+    throw error;
+  }
+};
+
+// Method to retrieve access requests for a specific patient 
+export const fetchPendingRequests = async (patientAddress) => {
+  try {
+    const accessControl = await getContract("accessControl");
+
+    console.log("[DEBUG] Fetching pending requests for patient:", patientAddress);
+
+    // Fetch all AccessRequested events
+    const events = await accessControl.queryFilter(
+      accessControl.filters.AccessRequested(patientAddress)
+    );
+
+    console.log("[DEBUG] AccessRequested events fetched:", events);
+
+    // Map through events
+    const pendingRequests = events.map((event, index) => {
+      console.log(`[DEBUG] Event ${index} raw data:`, event);
+
+      // Extract event arguments
+      const { providerAddress, purposeHash, plainTextPurpose } = event.args;
+
+      console.log(`[DEBUG] Event ${index} - Provider Address:`, providerAddress);
+      console.log(`[DEBUG] Event ${index} - Purpose Hash:`, purposeHash);
+      console.log(`[DEBUG] Event ${index} - Plain Text Purpose:`, plainTextPurpose);
+      console.log(`[DEBUG] Event ${index} - Type of Plain Text Purpose:`, typeof plainTextPurpose);
+
+      return {
+        doctorAddress: providerAddress,
+        purposeHash,
+        plainTextPurpose: plainTextPurpose || "Purpose not available", 
+      };
+    });
+
+    console.log("[DEBUG] Structured pending requests:", pendingRequests);
+
+    return pendingRequests;
+  } catch (error) {
+    console.error("[ERROR] Error fetching pending requests:", error);
+    return [];
+  }
+};
 
 
 
 
 
- 
-
-  
