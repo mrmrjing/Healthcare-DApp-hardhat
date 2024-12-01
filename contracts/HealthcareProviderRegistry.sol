@@ -11,6 +11,7 @@ contract HealthcareProviderRegistry {
         bool isVerified;   // Indicates if the provider is verified by the admin
         bool isRejected; // Indicates if the provider is rejected by the admin
         string dataCID;    // Content Identifier for encrypted off-chain provider data
+        bytes publicKey; // Public key of the provider
     }
 
     // Mapping(key-value store) to store healthcare provider data, keyed by their Ethereum address
@@ -20,7 +21,7 @@ contract HealthcareProviderRegistry {
     address[] private providerAddresses;
 
     // Events to log significant actions
-    event ProviderRegistered(address indexed providerAddress, string dataCID);
+    event ProviderRegistered(address indexed providerAddress, string dataCID, bytes publicKey);
     event ProviderVerified(address indexed providerAddress);
     event ProviderDataUpdated(address indexed providerAddress, string newDataCID);
     event ProviderRejected(address indexed providerAddress);
@@ -45,16 +46,17 @@ contract HealthcareProviderRegistry {
     // Function for healthcare providers to register themselves
     // - Requires the provider to not already be registered
     // - Takes the CID for the provider's encrypted off-chain data as input
-    function registerHealthcareProvider(string calldata dataCID) external {
+    function registerHealthcareProvider(string calldata dataCID, bytes calldata publicKey) external {
         require(!providers[msg.sender].isRegistered, "Provider already registered");
         providers[msg.sender] = HealthcareProvider({
             isRegistered: true,
             isVerified: false,
             isRejected: false,
-            dataCID: dataCID
+            dataCID: dataCID,
+            publicKey: publicKey
         });
         providerAddresses.push(msg.sender); // Add the provider's address to the list of registered providers
-        emit ProviderRegistered(msg.sender, dataCID); // Emit an event for successful registration
+        emit ProviderRegistered(msg.sender, dataCID, publicKey); // Emit an event for successful registration
     }
 
     // Function for the admin to verify a healthcare provider
@@ -107,5 +109,11 @@ contract HealthcareProviderRegistry {
     // Function to get all registered providers
     function getAllProviders() external view onlyAdmin returns (address[] memory) {
         return providerAddresses; 
+    }
+
+    // Function to get the public key of a specific provider, any user can call this function since public key is meant to be publicly accessible 
+    function getProviderPublicKey(address providerAddress) external view returns (bytes memory) {
+        require(providers[providerAddress].isRegistered, "Provider not registered");
+        return providers[providerAddress].publicKey;
     }
 }

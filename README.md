@@ -57,6 +57,8 @@ npx hardhat clean
 brew install ipfs
 ```
 
+- ipfs-http-client has to be v48.2.0 or lower 
+
 - To install IPFS on Windows: 
 ```bash 
 https://docs.ipfs.tech/install/ipfs-desktop/#windows
@@ -74,7 +76,27 @@ ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["GET", "POST",
 ipfs config --json API.HTTPHeaders.Access-Control-Allow-Headers '["Authorization"]'
 ```
 
+- Check ethers.js version: 
+```bash
+npm list ethers` 
+```
+
 - If you face any bugs with wallet address showing 0 balance or weird interactions with connect wallet, just reinstall metamask
 Especially error code like this: 
 MetaMask - RPC Error: Internal JSON-RPC error. 
 {code: -32603, message: 'Internal JSON-RPC error.', data: {…}, stack: '{\n  "code": -32603,\n  "message": "Internal JSON-RP…hfbeogaeaoehlefnkodbefgpgknn/common-1.js:1:210555'}
+
+OR 
+change to a different network, then change back to the local hardhat network in metamask
+and clear activity for each individual wallet 
+remember to log out of each account first
+due to the log in state still saved for some reason
+https://ethereum.stackexchange.com/questions/109625/received-invalid-block-tag-87-latest-block-number-is-0
+
+
+# Progress Check 011224 
+- Patient/Healthcare Provider registration + linkage to IPFS done 
+- Providers able to request access for a specific patient's medical records + include purpose 
+- Patients able to upload encrypted files to IPFS 
+- Have yet to check patient functionality to grant access to specific healthcare provider 
+- Have yet to check provider's retrieval of decryption key when patient grants access

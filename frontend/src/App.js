@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-d
 import LandingPage from "./pages/LandingPage";
 import PatientDashboardPage from "./pages/PatientDashboardPage";
 import GrantAccessPage from "./pages/GrantAccessPage";
+import RequestAccessPage from "./pages/RequestAccessPage"; 
 import PatientRegistration from "./pages/PatientRegistration";
 import DoctorRegistration from "./pages/DoctorRegistration";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -11,19 +12,12 @@ import { AuthContext } from "./contexts/AuthContext";
 function App() {
   const { authState, setAuthState } = useContext(AuthContext);
 
-  // Clear state and storage on app load
   useEffect(() => {
-    const clearPersistentData = () => {
-      localStorage.clear(); // Clear all local storage
-      setAuthState({
-        isAuthenticated: false,
-        userRole: null,
-        userAddress: null,
-      });
-    };
-
-    clearPersistentData();
-  }, [setAuthState]);
+    const storedAuthState = JSON.parse(localStorage.getItem("authState"));
+    if (storedAuthState) {
+      setAuthState(storedAuthState); // Restore previous auth state
+    }
+  }, []);
 
   // ProtectedRoute Logic
   const ProtectedRoute = ({ children, requiredRole }) => {
@@ -63,6 +57,14 @@ function App() {
           element={
             <ProtectedRoute requiredRole="patient">
               <GrantAccessPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/request-access"
+          element={
+            <ProtectedRoute requiredRole="doctor"> 
+              <RequestAccessPage />
             </ProtectedRoute>
           }
         />

@@ -7,6 +7,8 @@ import "../styles/DoctorRegistration.css";
 // Initialize IPFS client for local node
 const ipfs = create({ host: "localhost", port: 5001, protocol: "http" });
 
+const ethers = require("ethers");
+
 const DoctorRegistration = () => {
   const [formData, setFormData] = useState({
     name: "",
@@ -17,6 +19,7 @@ const DoctorRegistration = () => {
   });
   const [errors, setErrors] = useState({});
   const [cid, setCid] = useState("");
+  const [privateKey, setPrivateKey] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [failureMessage, setFailureMessage] = useState("");
@@ -93,35 +96,51 @@ const DoctorRegistration = () => {
 
   const handleRegisterDoctor = async (e) => {
     e.preventDefault();
-  
+
     if (!validateFields()) {
       setFailureMessage("Please correct the errors before submitting.");
       return;
     }
-  
+
     setIsLoading(true);
     setSuccessMessage("");
     setFailureMessage("");
-  
+
     try {
       // Step 1: Upload data to IPFS
       const cid = await uploadToIPFS(formData);
       setCid(cid);
-  
-      // Step 2: Register the provider on the blockchain
-      const tx = await registerProvider(cid);
-  
-      // Step 3: If successful, set the success message
+
+      // Step 2: Generate a key pair using ethers.js Wallet
+      const wallet = ethers.Wallet.createRandom();
+      const privateKey = wallet.privateKey; // Doctor's private key
+      setPrivateKey(privateKey); // Display private key on the screen
+
+      const publicKey = wallet.publicKey; // Doctor's public key 
+
+      // Step 3: Store the private key securely
+      localStorage.setItem("providerPrivateKey", privateKey);
+      console.log("Private Key stored securely.");
+
+      // Step 4: Convert public key to bytes for blockchain
+      const publicKeyBytes = ethers.getBytes(publicKey);
+      console.log("Public Key Bytes:", publicKeyBytes);
+
+      // Step 5: Register the provider on the blockchain, including the public key
+      const tx = await registerProvider(cid, publicKeyBytes);
+
+      // Step 6: If successful, set the success message
       setSuccessMessage("Doctor registered successfully!");
       setFailureMessage("");
       console.log("Transaction details:", tx);
+
+      // Redirect to doctor dashboard after a short delay
       setTimeout(() => {
-        navigate("/doctor/dashboard");
-      }, 2000);
+        navigate("/doctor/request-access", { replace: true });
+      }, 10000);
     } catch (error) {
       console.error("Registration failed:", error);
-  
-      // Display a more user-friendly message based on the error
+
       if (error.code === 4001) {
         setFailureMessage("Transaction rejected by the user. Please try again.");
       } else if (error.message && error.message.includes("gas")) {
@@ -129,17 +148,19 @@ const DoctorRegistration = () => {
       } else {
         setFailureMessage("An error occurred during registration. Please try again.");
       }
-  
-      setSuccessMessage(""); // Ensure no success message is shown
+
+      setSuccessMessage("");
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   return (
     <div className="registration-page">
       <h1>Doctor Registration</h1>
-      <p>Submit your professional information to register. This data will be securely stored off-chain.</p>
+      <p>
+        Submit your professional information to register. This data will be securely stored off-chain.
+      </p>
       <form className="registration-form" onSubmit={handleRegisterDoctor}>
         <div className="form-row">
           <label>Name:</label>
@@ -199,11 +220,19 @@ const DoctorRegistration = () => {
           {isLoading ? <span className="spinner"></span> : "Register"}
         </button>
       </form>
-  
+
       {/* Display success or failure messages */}
       {successMessage && (
         <div className="message-container">
           <p className="success-message">{successMessage}</p>
+          {privateKey && (
+            <div className="private-key-container">
+              <p><strong>Private Key:</strong> {privateKey}</p>
+              <p className="warning">
+                <strong>Warning:</strong> Please save this private key securely. You will not be able to retrieve it later.
+              </p>
+            </div>
+          )}
         </div>
       )}
       {failureMessage && (
@@ -213,6 +242,6 @@ const DoctorRegistration = () => {
       )}
     </div>
   );
-}  
+};
 
 export default DoctorRegistration;
