@@ -12,11 +12,15 @@ const LandingPage = () => {
 
   // Automatically redirect authenticated users with a role
   useEffect(() => {
-  if (isAuthenticated && userRole) {
-    navigate(`/${userRole}/dashboard`, { replace: true });
-  }
-}, [isAuthenticated, userRole, navigate]);
-
+    if (isAuthenticated && userRole) {
+      const targetPath = 
+        userRole === "doctor" 
+          ? "/doctor/request-access" 
+          : `/${userRole}/dashboard`;
+      navigate(targetPath, { replace: true });
+    }
+  }, [isAuthenticated, userRole, navigate]);
+  
 
   const handleLogout = () => {
     logout();
@@ -118,7 +122,7 @@ const LandingPage = () => {
                 <button
                   onClick={() => {
                     login("doctor");
-                    navigate("/doctor/dashboard");
+                    navigate("/doctor/request-access");
                   }}
                   className="role-button doctor-button"
                 >

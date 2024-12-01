@@ -136,7 +136,7 @@ const DoctorRegistration = () => {
 
       // Redirect to doctor dashboard after a short delay
       setTimeout(() => {
-        navigate("/doctor/request-access");
+        navigate("/doctor/request-access", { replace: true });
       }, 10000);
     } catch (error) {
       console.error("Registration failed:", error);
