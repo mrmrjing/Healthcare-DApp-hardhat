@@ -117,6 +117,8 @@ const DoctorRegistration = () => {
       setPrivateKey(privateKey); // Display private key on the screen
 
       const publicKey = wallet.publicKey; // Doctor's public key 
+      console.log("[DEBUG] Doctor's Public Key (Hex):", publicKey);
+      console.log("[DEBUG] Doctor's Private Key:", privateKey);
 
       // Step 3: Store the private key securely
       localStorage.setItem("providerPrivateKey", privateKey);
