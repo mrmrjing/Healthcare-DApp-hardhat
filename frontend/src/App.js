@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-d
 import LandingPage from "./pages/LandingPage";
 import PatientDashboardPage from "./pages/PatientDashboardPage";
 import GrantAccessPage from "./pages/GrantAccessPage";
+import RequestAccessPage from "./pages/RequestAccessPage"; 
 import PatientRegistration from "./pages/PatientRegistration";
 import DoctorRegistration from "./pages/DoctorRegistration";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -12,13 +13,11 @@ function App() {
   const { authState, setAuthState } = useContext(AuthContext);
 
   useEffect(() => {
-    // Only clear localStorage if explicitly needed (e.g., logout)
     const storedAuthState = JSON.parse(localStorage.getItem("authState"));
     if (storedAuthState) {
       setAuthState(storedAuthState); // Restore previous auth state
     }
-  }, [setAuthState]);
-  
+  }, []);
 
   // ProtectedRoute Logic
   const ProtectedRoute = ({ children, requiredRole }) => {
@@ -58,6 +57,14 @@ function App() {
           element={
             <ProtectedRoute requiredRole="patient">
               <GrantAccessPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/request-access"
+          element={
+            <ProtectedRoute requiredRole="doctor"> 
+              <RequestAccessPage />
             </ProtectedRoute>
           }
         />
