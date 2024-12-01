@@ -1,70 +1,158 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../../contexts/AuthContext';
-
-// Dummy data for demonstration
-const mockAccessLogs = [
-  { id: 1, date: '2024-11-20', action: 'Granted access to Dr. Smith' },
-  { id: 2, date: '2024-11-18', action: 'Revoked access from General Hospital' },
-  { id: 3, date: '2024-11-15', action: 'Accessed by Dr. Lee' },
-];
-
-const mockPermissions = [
-  { id: 1, name: 'Dr. Smith', type: 'Doctor', access: true },
-  { id: 2, name: 'General Hospital', type: 'Facility', access: false },
-  { id: 3, name: 'Dr. Lee', type: 'Doctor', access: true },
-];
+import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../contexts/AuthContext";
+import {
+  getProviderRegistryEvents,
+  isAuthorized,
+  grantAccessToProvider,
+  revokeAccessFromProvider,
+  getMyMedicalRecords,
+} from "../../services/blockchain/contractService";
+import UploadMedicalRecord from "../Patient/UploadMedicalRecord";
+import GrantAccessPage from "../Patient/GrantAccessPage";
+import "../../styles/PatientDashboard.css";
 
 const PatientDashboard = () => {
-  const { logout } = useContext(AuthContext);
+  const { authState, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [accessLogs, setAccessLogs] = useState([]);
   const [permissions, setPermissions] = useState([]);
+  const [medicalRecords, setMedicalRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Simulate fetching data
-    setAccessLogs(mockAccessLogs);
-    setPermissions(mockPermissions);
-  }, []);
+    const patientAddress = authState?.userAddress;
+    if (patientAddress) {
+      fetchDashboardData(patientAddress);
+      fetchMedicalRecords(patientAddress);
+    }
+  }, [authState?.userAddress]);
 
-  const togglePermission = (id) => {
-    setPermissions((prevPermissions) =>
-      prevPermissions.map((perm) =>
-        perm.id === id ? { ...perm, access: !perm.access } : perm
-      )
-    );
+  const fetchDashboardData = async (patientAddress) => {
+    try {
+      setLoading(true);
+
+      // Fetch provider registration events
+      const providerEvents = await getProviderRegistryEvents();
+
+      // Filter to include only those with explicit access granted
+      const filteredEvents = await Promise.all(
+        providerEvents.map(async (event) => {
+          const hasAccess = await isAuthorized(patientAddress, event.address);
+          return hasAccess ? event : null;
+        })
+      );
+
+      // Remove null values (providers without access)
+      const authorizedProviders = filteredEvents.filter(Boolean);
+
+      // Prepare access logs
+      setAccessLogs(
+        authorizedProviders.map((event) => ({
+          id: event.address,
+          date: new Date().toLocaleDateString(),
+          action: `Access granted to ${event.address}`,
+        }))
+      );
+
+      // Prepare permissions list
+      const permissions = authorizedProviders.map((event) => ({
+        id: event.address,
+        name: event.dataCID,
+        type: "Provider",
+        access: true, // Explicitly granted access
+      }));
+      setPermissions(permissions);
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+      setError("Failed to fetch data from the blockchain.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMedicalRecords = async (patientAddress) => {
+    try {
+      const records = await getMyMedicalRecords(patientAddress);
+      setMedicalRecords(records);
+    } catch (err) {
+      setError("Failed to fetch medical records.");
+    }
+  };
+
+  const togglePermission = async (providerAddress, currentAccess) => {
+    try {
+      if (currentAccess) {
+        await revokeAccessFromProvider(providerAddress);
+      } else {
+        await grantAccessToProvider(providerAddress);
+      }
+      setPermissions((prevPermissions) =>
+        prevPermissions.map((perm) =>
+          perm.id === providerAddress ? { ...perm, access: !perm.access } : perm
+        )
+      );
+    } catch (err) {
+      setError(`Failed to ${currentAccess ? "revoke" : "grant"} permission.`);
+    }
   };
 
   const handleLogout = () => {
-    logout(); // Clear authentication state
-    localStorage.removeItem('walletAddress'); // Clear stored wallet address if applicable
-    navigate('/'); // Redirect to the landing page
+    logout();
+    navigate("/");
   };
 
+  const handleUploadSuccess = () => {
+    // Refresh the medical records list after a successful upload
+    fetchMedicalRecords(authState?.userAddress);
+  };
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>{error}</p>;
+
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      {/* Logout Button */}
-      <div style={{ textAlign: 'right', marginBottom: '20px' }}>
-        <button
-          onClick={handleLogout}
-          style={{
-            backgroundColor: '#f44336',
-            color: 'white',
-            border: 'none',
-            padding: '10px 15px',
-            borderRadius: '5px',
-            cursor: 'pointer',
-          }}
-        >
-          Log Out
-        </button>
+    <div className="dashboard-container">
+      <div className="logout-button">
+        <button onClick={handleLogout}>Log Out</button>
       </div>
 
-      {/* Dashboard Header */}
       <h1>Patient Dashboard</h1>
 
+      {/* Medical Record Upload Section */}
+      <section className="section">
+        <h2>Upload Medical Record</h2>
+        <UploadMedicalRecord
+          patientAddress={authState?.userAddress}
+          onUploadSuccess={handleUploadSuccess}
+        />
+      </section>
+
+      {/* Medical Records List */}
+      <section className="section">
+        <h2>Your Medical Records</h2>
+        <ul>
+          {medicalRecords.length > 0 ? (
+            medicalRecords.map((record, index) => (
+              <li key={index}>
+                <p><strong>CID:</strong> {record.encryptedCID}</p>
+                <p><strong>Timestamp:</strong> {record.timestamp}</p>
+              </li>
+            ))
+          ) : (
+            <p>No medical records found.</p>
+          )}
+        </ul>
+      </section>
+
+      {/* Grant Access Section */}
+      <section className="section">
+        <h2>Pending Access Requests</h2>
+        <GrantAccessPage patientAddress={authState?.userAddress} />
+      </section>
+
       {/* Recent Access Logs Section */}
-      <section style={{ marginBottom: '20px' }}>
+      <section className="section">
         <h2>Recent Access Logs</h2>
         <ul>
           {accessLogs.map((log) => (
@@ -76,28 +164,28 @@ const PatientDashboard = () => {
       </section>
 
       {/* Manage Permissions Section */}
-      <section>
+      <section className="section">
         <h2>Manage Permissions</h2>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table>
           <thead>
             <tr>
-              <th style={{ border: '1px solid #ccc', padding: '10px' }}>Name</th>
-              <th style={{ border: '1px solid #ccc', padding: '10px' }}>Type</th>
-              <th style={{ border: '1px solid #ccc', padding: '10px' }}>Access</th>
-              <th style={{ border: '1px solid #ccc', padding: '10px' }}>Action</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Access</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {permissions.map((perm) => (
               <tr key={perm.id}>
-                <td style={{ border: '1px solid #ccc', padding: '10px' }}>{perm.name}</td>
-                <td style={{ border: '1px solid #ccc', padding: '10px' }}>{perm.type}</td>
-                <td style={{ border: '1px solid #ccc', padding: '10px' }}>
-                  {perm.access ? 'Granted' : 'Revoked'}
-                </td>
-                <td style={{ border: '1px solid #ccc', padding: '10px' }}>
-                  <button onClick={() => togglePermission(perm.id)}>
-                    {perm.access ? 'Revoke' : 'Grant'}
+                <td>{perm.name}</td>
+                <td>{perm.type}</td>
+                <td>{perm.access ? "Granted" : "Revoked"}</td>
+                <td>
+                  <button
+                    onClick={() => togglePermission(perm.id, perm.access)}
+                  >
+                    {perm.access ? "Revoke" : "Grant"}
                   </button>
                 </td>
               </tr>
