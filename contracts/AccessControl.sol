@@ -11,6 +11,7 @@ contract AccessControl {
         bytes32 purposeHash;   // A hash representing the purpose of access
         bytes encryptedKey;    // The encrypted key (added to store encrypted key)
         string plainTextPurpose; // The plain text purpose of access (added to store plain text purpose)
+        string cid; // The CID of the encrypted key stored in IPFS (added to store CID)
     }
 
     // Mapping to store access requests: patient -> provider -> access request details
@@ -25,7 +26,8 @@ contract AccessControl {
         address indexed patientAddress,
         address indexed providerAddress,
         bytes32 purposeHash,
-        string plainTextPurpose
+        string plainTextPurpose, 
+        string cid
     );
     event AccessApproved(
         address indexed patientAddress,
@@ -70,14 +72,15 @@ contract AccessControl {
             isApproved: false,
             purposeHash: purposeHash,
             plainTextPurpose: purpose,
-            encryptedKey: ""
+            encryptedKey: "",
+            cid: ""
         });
 
-        emit AccessRequested(patientAddress, msg.sender, purposeHash, purpose);
+        emit AccessRequested(patientAddress, msg.sender, purposeHash, purpose, "");
     }     
     
-    // Function for a patient to approve a provider's access request, including the encrypted key
-    function approveAccess(address providerAddress, bytes calldata encryptedKey)
+    // Function for a patient to approve a provider's access request, including the encrypted key and the CID 
+    function approveAccess(address providerAddress, bytes calldata encryptedKey, string calldata cid)
         external
         onlyRegisteredPatient
     {
@@ -89,6 +92,7 @@ contract AccessControl {
         // Approve the access request and store the encrypted key
         accessRequests[msg.sender][providerAddress].isApproved = true;
         accessRequests[msg.sender][providerAddress].encryptedKey = encryptedKey;
+        accessRequests[msg.sender][providerAddress].cid = cid;
 
         // Emit an event for the approval, including the encrypted key
         emit AccessApproved(msg.sender, providerAddress, encryptedKey);
@@ -132,4 +136,26 @@ contract AccessControl {
 
         return accessRequests[patientAddress][providerAddress].encryptedKey;
     }
+
+    // Function to retrieve the cid for a specific access request
+    function getCid(address patientAddress, address providerAddress)
+        external
+        view
+        onlyVerifiedProvider
+        returns (string memory)
+    {
+        return accessRequests[patientAddress][providerAddress].cid;
+    }
+
+    // Function to fetch CIDs that a provider has access to 
+    function getAuthorizedCIDs(address providerAddress, address patientAddress) 
+        external 
+        view 
+        onlyVerifiedProvider 
+        returns (string memory) 
+    {
+        require(accessRequests[patientAddress][providerAddress].isApproved, "Access not granted.");
+        return accessRequests[patientAddress][providerAddress].cid;
+    }
+
 }
