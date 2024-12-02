@@ -10,15 +10,7 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
   const [file, setFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
-  const [encryptionKey, setEncryptionKey] = useState(""); // Generated encryption key
-  const [masterPassword, setMasterPassword] = useState(""); // Master password for encryption key storage
-
-  // Generate encryption key
-  const generateEncryptionKey = () => {
-    const key = CryptoJS.lib.WordArray.random(256 / 8).toString(); // 256-bit key
-    setEncryptionKey(key);
-    console.log("Generated Encryption Key:", key);
-  };
+  const [masterPassword, setMasterPassword] = useState("");
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -29,12 +21,6 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
       setError("Please select a file to upload.");
       return;
     }
-
-    if (!encryptionKey) {
-      setError("Encryption key is missing. Please generate a key.");
-      return;
-    }
-
     if (!masterPassword) {
       setError("Please enter your master password to store the encryption key.");
       return;
@@ -44,38 +30,28 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
     setIsUploading(true);
 
     try {
+      // Derive symmetric key from master password
+      const symmetricKey = deriveKey(masterPassword);
+      console.log("Derived Symmetric Key:", symmetricKey.toString(CryptoJS.enc.Hex));
+
       // Encrypt the file
-      const encryptedFile = await encryptFile(file, encryptionKey);
+      const encryptedFile = await encryptFile(file, symmetricKey);
 
-      // Create a systematic file name
-      const now = new Date();
-      const fileName = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-        now.getDate()
-      ).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(
-        now.getMinutes()
-      ).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}_${file.name}`;
-
-      // Define MFS path
-      const mfsPath = `/medical-records/${fileName}`;
-
-      // Write encrypted file to IPFS MFS
-      await ipfs.files.write(mfsPath, encryptedFile, { create: true, parents: true });
-
-      // Get CID from the MFS path
-      const stats = await ipfs.files.stat(mfsPath);
-      const cid = stats.cid.toString();
-
+      // Save the encrypted file to IPFS
+      const cid = await uploadToIPFS(encryptedFile);
       console.log("File uploaded to IPFS, CID:", cid);
 
-      // Store the encryption key securely with the CID as the identifier
-      storeEncryptionKey(cid, encryptionKey, masterPassword);
+      // Encrypt symmetric key with the master password
+      const encryptedKey = CryptoJS.AES.encrypt(symmetricKey, masterPassword).toString();
 
-      // Upload CID to blockchain
+      // Save CID and encrypted key securely
+      saveEncryptionKey(cid, encryptedKey);
+
+      // Record CID on the blockchain
       await uploadMedicalRecord(patientAddress, cid);
 
       console.log("Medical record stored on blockchain.");
       setFile(null);
-      setEncryptionKey("");
       setMasterPassword("");
       if (onUploadSuccess) onUploadSuccess();
     } catch (err) {
@@ -86,65 +62,72 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
     }
   };
 
+  // Function to derive a symmetric key from the master password
+  const deriveKey = (password) => {
+    // Derive a 256-bit key using PBKDF2 with a salt
+    const salt = CryptoJS.enc.Hex.parse("a9b8c7d6e5f4a3b2"); // Random salt
+    return CryptoJS.PBKDF2(password, salt, { keySize: 256 / 32, iterations: 1000 });
+  };
+
   const encryptFile = (file, key) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          const fileData = new Uint8Array(reader.result); // Convert ArrayBuffer to Uint8Array
-          const wordArray = CryptoJS.lib.WordArray.create(fileData); // Create WordArray from Uint8Array
-          const encrypted = CryptoJS.AES.encrypt(wordArray, key).toString(); // Encrypt file data
-
-          // Convert the encrypted string back to binary format (ArrayBuffer)
-          const encryptedBuffer = new TextEncoder().encode(encrypted); // Encrypted binary data
-          resolve(encryptedBuffer); // Pass binary data to IPFS
+          const fileData = new Uint8Array(reader.result);
+          const wordArray = CryptoJS.lib.WordArray.create(fileData);
+          const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f");
+          console.log("[DEBUG] Symmetric key for encryption (Hex):", key.toString(CryptoJS.enc.Hex));
+  
+          const encrypted = CryptoJS.AES.encrypt(wordArray, key, {
+            iv: iv,
+            mode: CryptoJS.mode.CBC,
+            padding: CryptoJS.pad.Pkcs7,
+          });
+  
+          const encryptedBase64 = encrypted.toString(); // Base64 string
+          console.log("[DEBUG] Encrypted content (Base64):", encryptedBase64.slice(0, 100)); // Preview only
+          resolve(encryptedBase64); // Return Base64 string for storage
         } catch (encryptionError) {
           reject(encryptionError);
         }
       };
+  
       reader.onerror = reject;
-      reader.readAsArrayBuffer(file); // Read file as ArrayBuffer
+      reader.readAsArrayBuffer(file); // Read file as binary data
     });
   };
+  
+  
+  
 
-  // Function to store the encryption key securely
-  const storeEncryptionKey = (cid, key, password) => {
-    // Encrypt the key with the master password
-    const encryptedKey = CryptoJS.AES.encrypt(key, password).toString();
+  const uploadToIPFS = async (encryptedFile) => {
+    try {
+      const result = await ipfs.add(encryptedFile);
+  
+      // Ensure CID is stored as a string for blockchain storage
+      const cid = result.cid.toString(); // Convert CID to a string
+      console.log("[INFO] Encrypted file uploaded to IPFS. CID:", cid);
+  
+      return cid;
+    } catch (error) {
+      console.error("[ERROR] Error uploading to IPFS:", error);
+      throw error;
+    }
+  };
+  
 
-    // Retrieve existing keys from localStorage
-    const storedKeys = localStorage.getItem("encryptionKeys");
-    let encryptionKeys = storedKeys ? JSON.parse(storedKeys) : {};
-
-    // Store the encrypted key with the CID as the identifier
-    encryptionKeys[cid] = encryptedKey;
-
-    // Save back to localStorage
-    localStorage.setItem("encryptionKeys", JSON.stringify(encryptionKeys));
+  const saveEncryptionKey = (cid, encryptedKey) => {
+    const storedKeys = JSON.parse(localStorage.getItem("encryptionKeys") || "{}");
+    storedKeys[cid] = encryptedKey;
+    localStorage.setItem("encryptionKeys", JSON.stringify(storedKeys));
   };
 
   return (
     <div className="upload-container">
       <h2>Upload Medical Record</h2>
       <div>
-        <input
-          type="file"
-          onChange={handleFileChange}
-          accept=".pdf,.jpg,.png,.txt,.docx"
-        />
-      </div>
-      <div>
-        <button onClick={generateEncryptionKey} disabled={isUploading}>
-          Generate Encryption Key
-        </button>
-        {encryptionKey && (
-          <p>
-            <strong>Encryption Key:</strong> {encryptionKey} <br />
-            <em style={{ color: "red" }}>
-              Save this key! You will need it to decrypt your file.
-            </em>
-          </p>
-        )}
+        <input type="file" onChange={handleFileChange} accept=".pdf,.jpg,.png,.txt,.docx" />
       </div>
       <div>
         <label>Master Password:</label>
@@ -155,19 +138,12 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
           disabled={isUploading}
         />
         <p>
-          <em>
-            Your master password is used to securely store your encryption keys.
-          </em>
+          <em>Your master password is used to securely store your encryption keys.</em>
         </p>
       </div>
-      <div>
-        <button
-          onClick={handleUpload}
-          disabled={isUploading || !encryptionKey || !masterPassword}
-        >
-          {isUploading ? "Uploading..." : "Upload"}
-        </button>
-      </div>
+      <button onClick={handleUpload} disabled={isUploading || !masterPassword}>
+        {isUploading ? "Uploading..." : "Upload"}
+      </button>
       {error && <p className="error">{error}</p>}
     </div>
   );
