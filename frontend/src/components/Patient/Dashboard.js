@@ -74,12 +74,18 @@ const PatientDashboard = () => {
 
   const fetchMedicalRecords = async (patientAddress) => {
     try {
+      console.log("[DEBUG] Fetching medical records for patient:", patientAddress);
+  
+      // Fetch medical records from the blockchain
       const records = await getMyMedicalRecords(patientAddress);
+      console.log("[DEBUG] Fetched medical records:", records);
       setMedicalRecords(records);
     } catch (err) {
+      console.error("[ERROR] Failed to fetch medical records:", err);
       setError("Failed to fetch medical records.");
     }
   };
+  
 
   const togglePermission = async (providerAddress, currentAccess) => {
     try {
@@ -135,7 +141,7 @@ const PatientDashboard = () => {
           {medicalRecords.length > 0 ? (
             medicalRecords.map((record, index) => (
               <li key={index}>
-                <p><strong>CID:</strong> {record.encryptedCID}</p>
+                <p><strong>CID:</strong> {record.CID}</p>
                 <p><strong>Timestamp:</strong> {record.timestamp}</p>
               </li>
             ))
