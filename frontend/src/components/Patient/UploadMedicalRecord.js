@@ -84,7 +84,7 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
             mode: CryptoJS.mode.CBC,
             padding: CryptoJS.pad.Pkcs7,
           });
-  
+
           const encryptedBase64 = encrypted.toString(); // Base64 string
           console.log("[DEBUG] Encrypted content (Base64):", encryptedBase64.slice(0, 100)); // Preview only
           resolve(encryptedBase64); // Return Base64 string for storage
@@ -92,11 +92,12 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
           reject(encryptionError);
         }
       };
-  
+
       reader.onerror = reject;
       reader.readAsArrayBuffer(file); // Read file as binary data
     });
   };
+
   
   
   
