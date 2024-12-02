@@ -22,19 +22,19 @@ function App() {
   // ProtectedRoute Logic
   const ProtectedRoute = ({ children, requiredRole }) => {
     if (!authState.isAuthenticated) {
-      // Redirect to the landing page if not authenticated
       return <Navigate to="/" replace />;
     }
-
+  
     if (requiredRole && authState.userRole !== requiredRole) {
-      // Redirect if the user's role doesn't match the required role
-      return <Navigate to="/" replace />;
+      // Redirect based on current role if mismatched
+      const redirectPath = authState.userRole === "doctor"
+        ? "/doctor/request-access"
+        : "/patient/dashboard";
+      return <Navigate to={redirectPath} replace />;
     }
-
-    // Render children if authentication and role requirements are met
+  
     return children;
   };
-
   return (
     <Router>
       <Routes>
