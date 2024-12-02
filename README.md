@@ -100,3 +100,30 @@ https://ethereum.stackexchange.com/questions/109625/received-invalid-block-tag-8
 - Patients able to upload encrypted files to IPFS 
 - Have yet to check patient functionality to grant access to specific healthcare provider 
 - Have yet to check provider's retrieval of decryption key when patient grants access
+
+- Patient receives approve access granted successfully, havent yet to check with provider's end, need to check retrieve key to obtain the decryption key 
+
+# Progress Check 021224 
+## Patient side: 
+### Uploading medical records: 
+- Derive a symmetric key from the master password
+- Encrypt the uploaded medical record with the symmetric key 
+- Upload the encrypted medical record to IPFS 
+- Store the CID on the blockchain 
+
+### Granting access: 
+- Rederive the symmetric key from the master password 
+- Perform an ECDH key exchange with the doctor's public key to dervie a shared secret 
+- Encrypt the symmetric key with the shared secret 
+- Send this encrypted symmetric key to the doctor via the blockchain, along with the list of CIDs the doctor is allowed to access (should remove this part)
+
+## Doctor side: 
+### Request Access: 
+- Send an access request to the patient 
+### Retrieve and decrypt the symmetric key 
+- Retrieve the encrypted symmetric key from the blockchain 
+- Perform ECDH to derive the shared secret 
+- Decrypt the symmetric key using the shared secret 
+
+### Accessing medical records 
+- Use the decrypted symmetric key to decrypt the patient's medical records 
