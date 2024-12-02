@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-require("@nomicfoundation/hardhat-chai-matchers"); 
+require("@nomicfoundation/hardhat-chai-matchers");
 
 describe("MedicalRecords", function () {
     let medicalRecords;
@@ -51,13 +51,13 @@ describe("MedicalRecords", function () {
         await accessControl.connect(patient).approveAccess(await provider.getAddress());
 
         // Provider uploads a medical record for the patient
-        const recordCID = ethers.encodeBytes32String("recordCID");
+        const recordCID = ethers.toUtf8Bytes("recordCID");
         await medicalRecords.connect(provider).uploadMedicalRecord(await patient.getAddress(), recordCID);
 
         // Patient retrieves their medical records to verify the upload
         const records = await medicalRecords.connect(patient).getMedicalRecords();
         expect(records.length).to.equal(1);
-        expect(records[0].encryptedCID).to.equal(recordCID);
+        expect(records[0].encryptedCID).to.equal(ethers.hexlify(recordCID));
     });
 
     // Test case: Prevent unauthorized providers from uploading medical records
@@ -66,7 +66,7 @@ describe("MedicalRecords", function () {
         await patientRegistry.connect(patient).registerPatient("patientCID");
 
         // Unauthorized provider attempts to upload a record
-        const recordCID = ethers.encodeBytes32String("recordCID");
+        const recordCID = ethers.toUtf8Bytes("recordCID");
         await expect(
             medicalRecords.connect(provider).uploadMedicalRecord(await patient.getAddress(), recordCID)
         ).to.be.revertedWith("Caller is not authorized");
@@ -85,13 +85,13 @@ describe("MedicalRecords", function () {
         await accessControl.connect(patient).approveAccess(await provider.getAddress());
 
         // Provider uploads a medical record for the patient
-        const recordCID = ethers.encodeBytes32String("recordCID");
+        const recordCID = ethers.toUtf8Bytes("recordCID");
         await medicalRecords.connect(provider).uploadMedicalRecord(await patient.getAddress(), recordCID);
 
         // Patient retrieves their medical records to verify the upload
         const records = await medicalRecords.connect(patient).getMedicalRecords();
         expect(records.length).to.equal(1);
-        expect(records[0].encryptedCID).to.equal(recordCID);
+        expect(records[0].encryptedCID).to.equal(ethers.hexlify(recordCID));
     });
 
     // Test case: Prevent unauthorized access to retrieve a patient's medical records
@@ -111,19 +111,19 @@ describe("MedicalRecords", function () {
         await patientRegistry.connect(patient).registerPatient("patientCID");
         await providerRegistry.connect(provider).registerHealthcareProvider("providerCID");
         await providerRegistry.connect(owner).verifyHealthcareProvider(await provider.getAddress());
-    
+
         // Provider requests and gets access approval from the patient
         const purposeHash = ethers.encodeBytes32String("PurposeHash");
         await accessControl.connect(provider).requestAccess(await patient.getAddress(), purposeHash);
         await accessControl.connect(patient).approveAccess(await provider.getAddress());
-    
+
         // Provider uploads a medical record for the patient
-        const recordCID = ethers.encodeBytes32String("recordCID");
+        const recordCID = ethers.toUtf8Bytes("recordCID");
         await medicalRecords.connect(provider).uploadMedicalRecord(await patient.getAddress(), recordCID);
-    
+
         // Authorized provider retrieves the patient's medical records
         const records = await medicalRecords.connect(provider).getPatientRecords(await patient.getAddress());
         expect(records.length).to.equal(1);
-        expect(records[0].encryptedCID).to.equal(recordCID);
+        expect(records[0].encryptedCID).to.equal(ethers.hexlify(recordCID));
     });
 });

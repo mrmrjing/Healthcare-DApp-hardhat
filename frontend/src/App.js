@@ -1,32 +1,40 @@
-import React from "react";
+import React, { useEffect, useContext } from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import PatientDashboardPage from "./pages/PatientDashboardPage";
 import GrantAccessPage from "./pages/GrantAccessPage";
+import RequestAccessPage from "./pages/RequestAccessPage"; 
 import PatientRegistration from "./pages/PatientRegistration";
 import DoctorRegistration from "./pages/DoctorRegistration";
 import AdminDashboard from "./pages/AdminDashboard";
 import { AuthContext } from "./contexts/AuthContext";
 
 function App() {
-  const { authState } = React.useContext(AuthContext);
+  const { authState, setAuthState } = useContext(AuthContext);
 
-  // Inline ProtectedRoute logic
+  useEffect(() => {
+    const storedAuthState = JSON.parse(localStorage.getItem("authState"));
+    if (storedAuthState) {
+      setAuthState(storedAuthState); // Restore previous auth state
+    }
+  }, []);
+
+  // ProtectedRoute Logic
   const ProtectedRoute = ({ children, requiredRole }) => {
     if (!authState.isAuthenticated) {
-      // Redirect to the landing page if not authenticated
       return <Navigate to="/" replace />;
     }
-
+  
     if (requiredRole && authState.userRole !== requiredRole) {
-      // Redirect if the user's role doesn't match the required role
-      return <Navigate to="/" replace />;
+      // Redirect based on current role if mismatched
+      const redirectPath = authState.userRole === "doctor"
+        ? "/doctor/request-access"
+        : "/patient/dashboard";
+      return <Navigate to={redirectPath} replace />;
     }
-
-    // Render children if authentication and role requirements are met
+  
     return children;
   };
-
   return (
     <Router>
       <Routes>
@@ -49,6 +57,14 @@ function App() {
           element={
             <ProtectedRoute requiredRole="patient">
               <GrantAccessPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/request-access"
+          element={
+            <ProtectedRoute requiredRole="doctor"> 
+              <RequestAccessPage />
             </ProtectedRoute>
           }
         />
