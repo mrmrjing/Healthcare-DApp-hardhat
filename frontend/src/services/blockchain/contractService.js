@@ -173,20 +173,18 @@ export const isProviderVerified = async (providerAddress) => {
 };
 
 // Allows authorized users to upload a medical record for a patient.
-export const uploadMedicalRecord = async (patientAddress, encryptedCID) => {
+export const uploadMedicalRecord = async (patientAddress, CID) => {
   try {
     const medicalRecords = await getContract("medicalRecords");
 
-    // Ensure CID is correctly encoded
-    const encodedCID = encodeCID(encryptedCID);
-    const tx = await medicalRecords.uploadMedicalRecord(
-      patientAddress,
-      encodedCID
-    );
+    console.log("Uploading medical record with CID:", CID);
+
+    const tx = await medicalRecords.uploadMedicalRecord(patientAddress, CID);
     await tx.wait();
-    console.log("Medical record uploaded.");
+    console.log("Medical record uploaded successfully.");
   } catch (error) {
     console.error("Error uploading medical record:", error);
+    throw error;
   }
 };
 
@@ -211,7 +209,7 @@ export const getMyMedicalRecords = async () => {
       }
 
       return {
-        encryptedCID: decodeCID(record.encryptedCID),
+        CID: record.CID,
         timestamp: new Date(timestamp * 1000).toLocaleString(),
       };
     });
@@ -227,45 +225,31 @@ export const getPatientRecords = async (patientAddress) => {
     const medicalRecords = await getContract("medicalRecords");
     const records = await medicalRecords.getPatientRecords(patientAddress);
 
-    return records.map((record) => ({
-      encryptedCID: decodeCID(record.encryptedCID),
-      timestamp: new Date(record.timestamp.toNumber() * 1000).toLocaleString(),
-    }));
+    return records.map((record) => {
+      let timestamp;
+
+      if (typeof record.timestamp === "bigint") {
+        timestamp = Number(record.timestamp); // Convert BigInt to Number
+      } else if (record.timestamp && typeof record.timestamp.toNumber === "function") {
+        timestamp = record.timestamp.toNumber();
+      } else if (typeof record.timestamp === "string" || typeof record.timestamp === "number") {
+        timestamp = Number(record.timestamp);
+      } else {
+        console.error("Unexpected timestamp format:", record.timestamp);
+        throw new Error("Unexpected timestamp format");
+      }
+
+      return {
+        CID: record.CID,
+        timestamp: new Date(timestamp * 1000).toLocaleString(),
+      };
+    });
   } catch (error) {
     console.error("Error fetching patient records:", error.message);
     return [];
   }
 };
 
-// Helper: Convert a string CID to bytes
-const encodeCID = (cid) => {
-  if (typeof cid !== "string") {
-    throw new Error("CID must be a string.");
-  }
-  return toUtf8Bytes(cid); // Use ethers' toUtf8Bytes
-};
-
-// Helper: Convert bytes back to a string CID
-const decodeCID = (bytes) => {
-  try {
-    if (typeof bytes === "string") {
-      // If already a valid string, return it as-is
-      return bytes;
-    } else if (bytes instanceof Uint8Array || bytes instanceof ArrayBuffer) {
-      // Handle Uint8Array or ArrayBuffer
-      const decoder = new TextDecoder();
-      return decoder.decode(new Uint8Array(bytes));
-    } else if (typeof bytes === "string" && bytes.startsWith("0x")) {
-      // Handle hex strings
-      return toUtf8String(bytes);
-    } else {
-      throw new Error("Unsupported CID format");
-    }
-  } catch (error) {
-    console.error("Error decoding CID:", error);
-    throw error;
-  }
-};
 
 // Allows a user to register as a patient with their data CID.
 export const registerPatient = async (dataCID) => {
@@ -383,22 +367,19 @@ export const getProviderRegistryEvents = async () => {
     const parsedEvents = await Promise.all(
       registeredEvents.map(async (event) => {
         const providerAddress = event.args.providerAddress;
-        const rawDataCID = event.args.dataCID; // Should be a string
+        const dataCID = event.args.dataCID; // CID is already a string
         const publicKey = event.args.publicKey; // Public key as bytes or hex
 
         console.log("Provider Address:", providerAddress);
-        console.log("Raw CID:", rawDataCID);
+        console.log("CID:", dataCID);
         console.log("Public Key:", publicKey);
-
-        // Decode CID only if necessary
-        const dataCID = typeof rawDataCID === "string" ? rawDataCID : decodeCID(rawDataCID);
 
         const isRejected = await registry.isProviderRejected(providerAddress);
         const isVerified = await registry.isProviderVerified(providerAddress);
 
         return {
           address: providerAddress,
-          dataCID,
+          dataCID, // Directly use the string CID
           publicKey, // Include public key if needed
           isRejected,
           isVerified,
@@ -495,6 +476,18 @@ export const fetchPendingRequests = async (patientAddress) => {
     return [];
   }
 };
+
+export const getAuthorizedCIDs = async (providerAddress, patientAddress) => {
+  try {
+      const accessControl = await getContract("accessControl");
+      const cid = await accessControl.getAuthorizedCIDs(providerAddress, patientAddress);
+      return cid; // Return the authorized CID
+  } catch (error) {
+      console.error("Error fetching authorized CIDs:", error);
+      throw error;
+  }
+};
+
 
 
 
