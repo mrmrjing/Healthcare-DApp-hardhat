@@ -102,7 +102,7 @@ const DoctorRegistration = () => {
       localStorage.setItem("providerPrivateKey", privateKey);
 
       // Step 4: Convert public key to bytes for blockchain
-      const publicKeyBytes = ethers.utils.arrayify(publicKey);
+      const publicKeyBytes = ethers.getBytes(publicKey);
 
       // Step 5: Register the doctor on the blockchain
       console.log("[INFO] Registering doctor on the blockchain...");
