@@ -10,11 +10,13 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
   const [file, setFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   // Handle file selection
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
     setError(null); // Clear previous errors when a new file is selected
+    setSuccessMessage(null); // Clear success message when a new file is selected
   };
 
   // Generate a symmetric key using MetaMask
@@ -90,6 +92,7 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
     }
 
     setError(null);
+    setSuccessMessage(null); // Clear previous success messages
     setIsUploading(true);
 
     try {
@@ -107,6 +110,9 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
       // Step 4: Record the CID on the blockchain
       await uploadMedicalRecord(patientAddress, cid);
       console.log("[INFO] Medical record successfully stored on blockchain.");
+
+      // Step 5: Display success message
+      setSuccessMessage("Medical record successfully uploaded!");
 
       // Reset the form and notify success
       setFile(null);
@@ -134,6 +140,7 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
         {isUploading ? "Uploading..." : "Upload"}
       </button>
       {error && <p className="error">{error}</p>}
+      {successMessage && <p className="success">{successMessage}</p>} 
     </div>
   );
 };
