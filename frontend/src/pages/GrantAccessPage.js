@@ -29,6 +29,7 @@ const GrantAccessPage = ({ patientAddress }) => {
     const loadAccessRequests = async () => {
       if (!patientAddress) {
         console.warn("[WARN] Patient address is not defined.");
+        setError("Patient address is required to fetch access requests.");
         return;
       }
 
@@ -38,7 +39,7 @@ const GrantAccessPage = ({ patientAddress }) => {
 
         const [requests, records] = await Promise.all([
           fetchPendingRequests(patientAddress),
-          getMyMedicalRecords()
+          getMyMedicalRecords(),
         ]);
 
         console.log("[DEBUG] Fetched pending requests:", requests);
@@ -48,7 +49,9 @@ const GrantAccessPage = ({ patientAddress }) => {
         setMedicalRecords(records || []);
       } catch (err) {
         console.error("[ERROR] Failed to load access requests or medical records:", err);
-        setError("Failed to load access requests or medical records.");
+        setError(
+          "An error occurred while fetching access requests or medical records. Please try again later."
+        );
       } finally {
         setLoading(false);
       }
@@ -59,9 +62,14 @@ const GrantAccessPage = ({ patientAddress }) => {
 
   // Handle the selection of CIDs
   const handleCIDSelection = (event, requestIndex) => {
-    const selectedOptions = Array.from(event.target.selectedOptions).map(opt => opt.value);
-    setSelectedCIDs(prev => ({ ...prev, [requestIndex]: selectedOptions }));
-    console.log("[DEBUG] Updated selected CIDs:", { ...selectedCIDs, [requestIndex]: selectedOptions });
+    try {
+      const selectedOptions = Array.from(event.target.selectedOptions).map(opt => opt.value);
+      setSelectedCIDs(prev => ({ ...prev, [requestIndex]: selectedOptions }));
+      console.log("[DEBUG] Updated selected CIDs:", { ...selectedCIDs, [requestIndex]: selectedOptions });
+    } catch (err) {
+      console.error("[ERROR] Failed to handle CID selection:", err);
+      setMessage("An error occurred while selecting CIDs.");
+    }
   };
 
   // Approve access for a specific request
@@ -89,6 +97,9 @@ const GrantAccessPage = ({ patientAddress }) => {
 
       // Fetch provider's public key
       const publicKeyBytes = await getProviderPublicKey(request.doctorAddress);
+      if (!publicKeyBytes) {
+        throw new Error("Provider public key not found.");
+      }
       const publicKeyHex = hexlify(publicKeyBytes).substring(2);
       const doctorPublicKey = ec.keyFromPublic(publicKeyHex, "hex");
 
@@ -115,7 +126,7 @@ const GrantAccessPage = ({ patientAddress }) => {
       // Prepare encrypted key object
       const encryptedKeyObject = {
         ephemeralPublicKey,
-        encryptedSymmetricKey
+        encryptedSymmetricKey,
       };
       const encryptedKeyJSON = JSON.stringify(encryptedKeyObject);
       const encryptedKeyBytes = toUtf8Bytes(encryptedKeyJSON);
@@ -129,7 +140,11 @@ const GrantAccessPage = ({ patientAddress }) => {
       setMessage("Access approved successfully.");
     } catch (error) {
       console.error("[ERROR] Failed to approve access:", error);
-      setMessage("Failed to approve access.");
+      if (error.message.includes("Provider public key")) {
+        setMessage("Failed to retrieve the provider's public key.");
+      } else {
+        setMessage("An unexpected error occurred while approving access.");
+      }
     }
   };
 
@@ -143,7 +158,7 @@ const GrantAccessPage = ({ patientAddress }) => {
       setMessage(`Access revoked for doctor: ${doctorAddress}`);
     } catch (err) {
       console.error("[ERROR] Failed to revoke access:", err);
-      setMessage("Failed to revoke access.");
+      setMessage("An error occurred while revoking access.");
     }
   };
 
