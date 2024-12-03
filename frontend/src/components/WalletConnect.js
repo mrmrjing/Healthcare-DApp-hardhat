@@ -4,7 +4,7 @@ import {
   isPatientRegistered,
   isProviderRegistered,
   isProviderVerified,
-} from "../services/blockchain/contractService";
+} from "../services/contractService";
 
 const WalletConnect = () => {
   const { authState, setAuthState } = useContext(AuthContext);

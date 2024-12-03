@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { registerProvider } from "../services/blockchain/contractService";
+import { registerProvider } from "../services/contractService";
 import { create } from "ipfs-http-client";
 import "../styles/DoctorRegistration.css";
 

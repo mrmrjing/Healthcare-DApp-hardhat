@@ -7,7 +7,7 @@ import {
   rejectProvider,
   isProviderVerified,
   isProviderRejected,
-} from "../services/blockchain/contractService";
+} from "../services/contractService";
 import "../styles/AdminDashboard.css";
 
 const AdminDashboard = () => {

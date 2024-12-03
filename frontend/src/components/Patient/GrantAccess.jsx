@@ -5,7 +5,7 @@ import {
   fetchPendingRequests,
   getProviderPublicKey,
   getMyMedicalRecords,
-} from "../../services/blockchain/contractService";
+} from "../../services/contractService";
 import CryptoJS from "crypto-js";
 import { ec as EC } from "elliptic";
 import { hexlify, toUtf8Bytes } from "ethers";

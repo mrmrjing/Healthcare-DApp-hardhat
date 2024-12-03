@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { uploadMedicalRecord } from "../../services/blockchain/contractService";
+import { uploadMedicalRecord } from "../../services/contractService";
 import { create } from "ipfs-http-client";
 import CryptoJS from "crypto-js";
 

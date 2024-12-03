@@ -1,12 +1,12 @@
 import React, { useEffect, useContext } from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
-import PatientDashboardPage from "./pages/PatientDashboardPage";
-import GrantAccessPage from "./pages/GrantAccessPage";
+import PatientDashboard from "./pages/PatientDashboardPage";
+import GrantAccess from "./components/Patient/GrantAccess";
 import RequestAccessPage from "./pages/RequestAccessPage"; 
-import PatientRegistration from "./pages/PatientRegistration";
-import DoctorRegistration from "./pages/DoctorRegistration";
-import AdminDashboard from "./pages/AdminDashboard";
+import PatientRegistration from "./pages/PatientRegistrationPage";
+import DoctorRegistration from "./pages/DoctorRegistrationPage";
+import AdminDashboard from "./pages/AdminDashboardPage";
 import { AuthContext } from "./contexts/AuthContext";
 
 function App() {
@@ -48,7 +48,7 @@ function App() {
           path="/patient/dashboard"
           element={
             <ProtectedRoute requiredRole="patient">
-              <PatientDashboardPage />
+              <PatientDashboard/>
             </ProtectedRoute>
           }
         />
@@ -56,7 +56,7 @@ function App() {
           path="/patient/grant-access"
           element={
             <ProtectedRoute requiredRole="patient">
-              <GrantAccessPage />
+              <GrantAccess />
             </ProtectedRoute>
           }
         />

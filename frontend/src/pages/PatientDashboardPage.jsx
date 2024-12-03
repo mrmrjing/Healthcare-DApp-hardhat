@@ -7,7 +7,7 @@ import {
   grantAccessToProvider,
   revokeAccessFromProvider,
   getMyMedicalRecords,
-} from "../services/blockchain/contractService";
+} from "../services/contractService";
 import UploadMedicalRecord from "../components/Patient/UploadMedicalRecord";
 import GrantAccess from "../components/Patient/GrantAccess";
 import "../styles/PatientDashboard.css";

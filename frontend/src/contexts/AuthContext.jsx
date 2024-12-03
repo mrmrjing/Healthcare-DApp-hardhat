@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from "react";
-import { isProviderVerified, isAuthorized } from "../services/blockchain/contractService";
+import { isProviderVerified, isAuthorized } from "../services/contractService";
 
 export const AuthContext = createContext();
 
