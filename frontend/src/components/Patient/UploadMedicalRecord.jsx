@@ -10,7 +10,6 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
   const [file, setFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
-  const [masterPassword, setMasterPassword] = useState("");
 
   // Handle file selection
   const handleFileChange = (e) => {
@@ -18,58 +17,23 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
     setError(null); // Clear previous errors when a new file is selected
   };
 
-  // Handle file upload
-  const handleUpload = async () => {
-    if (!file) {
-      setError("Please select a file to upload.");
-      return;
-    }
-    if (!masterPassword) {
-      setError("Please enter your master password to store the encryption key.");
-      return;
-    }
+  // Generate a symmetric key using MetaMask
+  const generateSymmetricKey = async () => {
+    if (!window.ethereum) throw new Error("MetaMask is not installed.");
 
-    setError(null);
-    setIsUploading(true);
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const userAddress = accounts[0];
 
-    try {
-      // Step 1: Derive symmetric key from master password
-      const symmetricKey = deriveKey(masterPassword);
-      console.log("[INFO] Derived Symmetric Key (Hex):", symmetricKey.toString(CryptoJS.enc.Hex));
+    // Sign a unique message
+    const message = "EncryptionKeyDerivation:" + new Date().toISOString();
+    const signature = await window.ethereum.request({
+      method: "personal_sign",
+      params: [message, userAddress],
+    });
 
-      // Step 2: Encrypt the file
-      const encryptedFile = await encryptFile(file, symmetricKey);
-
-      // Step 3: Upload the encrypted file to IPFS
-      const cid = await uploadToIPFS(encryptedFile);
-      console.log("[INFO] File uploaded to IPFS. CID:", cid);
-
-      // Step 4: Encrypt the symmetric key with the master password
-      const encryptedKey = CryptoJS.AES.encrypt(symmetricKey, masterPassword).toString();
-
-      // Step 5: Save CID and encrypted key locally
-      saveEncryptionKey(cid, encryptedKey);
-
-      // Step 6: Record the CID on the blockchain
-      await uploadMedicalRecord(patientAddress, cid);
-      console.log("[INFO] Medical record successfully stored on blockchain.");
-
-      // Reset the form and notify success
-      setFile(null);
-      setMasterPassword("");
-      if (onUploadSuccess) onUploadSuccess();
-    } catch (err) {
-      console.error("[ERROR] Error uploading medical record:", err);
-      setError("Failed to upload medical record. Please try again.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  // Derive a symmetric key using the master password
-  const deriveKey = (password) => {
-    const salt = CryptoJS.enc.Hex.parse("a9b8c7d6e5f4a3b2"); // Static salt (should be dynamic in production)
-    return CryptoJS.PBKDF2(password, salt, { keySize: 256 / 32, iterations: 1000 });
+    // Derive a symmetric key from the signature
+    const hash = CryptoJS.SHA256(signature).toString(CryptoJS.enc.Hex);
+    return hash; // Use this hash as the symmetric key
   };
 
   // Encrypt file data using AES encryption
@@ -82,8 +46,6 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
           const wordArray = CryptoJS.lib.WordArray.create(fileData);
           const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // Static IV (replace with dynamic in production)
 
-          console.log("[DEBUG] Symmetric key (Hex):", key.toString(CryptoJS.enc.Hex));
-
           const encrypted = CryptoJS.AES.encrypt(wordArray, key, {
             iv,
             mode: CryptoJS.mode.CBC,
@@ -91,7 +53,6 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
           });
 
           const encryptedBase64 = encrypted.toString(); // Encrypted file as Base64 string
-          console.log("[DEBUG] Encrypted file preview (Base64):", encryptedBase64.slice(0, 100));
           resolve(encryptedBase64);
         } catch (encryptionError) {
           reject(encryptionError);
@@ -121,12 +82,41 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
     }
   };
 
-  // Save the encrypted key locally
-  const saveEncryptionKey = (cid, encryptedKey) => {
-    console.log("[INFO] Saving encrypted key locally...");
-    const storedKeys = JSON.parse(localStorage.getItem("encryptionKeys") || "{}");
-    storedKeys[cid] = encryptedKey;
-    localStorage.setItem("encryptionKeys", JSON.stringify(storedKeys));
+  // Handle file upload
+  const handleUpload = async () => {
+    if (!file) {
+      setError("Please select a file to upload.");
+      return;
+    }
+
+    setError(null);
+    setIsUploading(true);
+
+    try {
+      // Step 1: Generate a symmetric key using MetaMask
+      const symmetricKey = await generateSymmetricKey();
+      console.log("[INFO] Derived Symmetric Key (Hex):", symmetricKey);
+
+      // Step 2: Encrypt the file
+      const encryptedFile = await encryptFile(file, symmetricKey);
+
+      // Step 3: Upload the encrypted file to IPFS
+      const cid = await uploadToIPFS(encryptedFile);
+      console.log("[INFO] File uploaded to IPFS. CID:", cid);
+
+      // Step 4: Record the CID on the blockchain
+      await uploadMedicalRecord(patientAddress, cid);
+      console.log("[INFO] Medical record successfully stored on blockchain.");
+
+      // Reset the form and notify success
+      setFile(null);
+      if (onUploadSuccess) onUploadSuccess();
+    } catch (err) {
+      console.error("[ERROR] Error uploading medical record:", err);
+      setError("Failed to upload medical record. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -140,19 +130,7 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
           disabled={isUploading}
         />
       </div>
-      <div>
-        <label>Master Password:</label>
-        <input
-          type="password"
-          value={masterPassword}
-          onChange={(e) => setMasterPassword(e.target.value)}
-          disabled={isUploading}
-        />
-        <p>
-          <em>Your master password is used to securely store your encryption keys.</em>
-        </p>
-      </div>
-      <button onClick={handleUpload} disabled={isUploading || !masterPassword}>
+      <button onClick={handleUpload} disabled={isUploading}>
         {isUploading ? "Uploading..." : "Upload"}
       </button>
       {error && <p className="error">{error}</p>}
