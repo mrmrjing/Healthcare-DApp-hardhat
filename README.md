@@ -139,11 +139,13 @@ https://ethereum.stackexchange.com/questions/109625/received-invalid-block-tag-8
 - Providers able to view the decrypted PDF file 
 
 ## TODO: 
-- Fix insecure key management by using metamask wallet for all signing and encryptions, shouldn't be able to get patients to input their master password to generate the symmetric key, or for a provider to input their private key to obtain the decryption key
+- ~Fix insecure key management by using metamask wallet for all signing and encryptions, shouldn't be able to get patients to input their master password to generate the symmetric key~, or for a provider to input their private key to obtain the decryption key, it should be linked to metamask to manage the keys
 - Fix using fixed IVs and salts for AES encryption and decryption to generating it dynamicaly, prepend the IV to ciphertext so that it can be used during decryption 
 - Remove storing of encryption keys in localstorage and use metamask to manage the encryption keys 
+- Prevent duplicate registration (i.e. an admin cant register as a patient or provider)
 - Add more robuts error handling to prevent unhandled errors and sudden crashes 
 - Code refactoring to ensure consistent coding practices (use ES6 instead of ES5)
 - Test smart contracts for security issues and bugs!!
 - Add unit tests for frontend using Jest 
 - Improve UI of app
+
