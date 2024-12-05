@@ -71,12 +71,6 @@ const LandingPage = () => {
             blockchain technology. Experience privacy, security, and
             accessibility like never before.
           </p>
-          <button
-            onClick={() => navigate("/learn-more")}
-            className="learn-more-button"
-          >
-            Learn More
-          </button>
         </div>
       </header>
 
