@@ -1,5 +1,4 @@
-/* LandingPage.css */
-
+/* General Styles */
 body {
   margin: 0;
   padding: 0;
@@ -36,22 +35,6 @@ body {
   line-height: 1.8;
 }
 
-.learn-more-button {
-  margin-top: 20px;
-  background-color: #fff;
-  color: #1e88e5;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 25px;
-  font-size: 1em;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.learn-more-button:hover {
-  background-color: #bbdefb;
-}
-
 .main-content {
   width: 90%;
   max-width: 1200px;
@@ -84,6 +67,7 @@ body {
   line-height: 1.6;
 }
 
+/* Buttons */
 .role-buttons {
   display: flex;
   flex-wrap: wrap;
@@ -92,77 +76,77 @@ body {
 }
 
 .role-button {
-  padding: 12px 25px;
-  font-size: 1em;
+  padding: 15px 30px;
+  font-size: 1.1em;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
+  font-weight: bold;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  text-align: center;
 }
 
-/* Sign Up and Log In Buttons */
+/* Specific Button Styles */
 
+/* Patient Button */
 .patient-button {
   background: linear-gradient(to right, #42a5f5, #1e88e5);
   color: white;
-  font-weight: bold;
 }
 
 .patient-button:hover {
   background: linear-gradient(to right, #1e88e5, #1565c0);
-  transform: translateY(-2px);
+  transform: scale(1.05);
 }
 
+/* Doctor Button */
 .doctor-button {
   background: linear-gradient(to right, #66bb6a, #43a047);
   color: white;
-  font-weight: bold;
 }
 
 .doctor-button:hover {
   background: linear-gradient(to right, #43a047, #2e7d32);
-  transform: translateY(-2px);
+  transform: scale(1.05);
 }
 
-.patient-login {
-  background: linear-gradient(to right, #1976d2, #1565c0);
+/* Admin Button */
+.admin-button {
+  background: linear-gradient(to right, #ffa726, #fb8c00);
   color: white;
-  font-weight: bold;
-  border: 2px solid #1976d2;
+  margin-top: 20px;
 }
 
-.patient-login:hover {
-  background: linear-gradient(to right, #1565c0, #0d47a1);
-  transform: translateY(-2px);
+.admin-button:hover {
+  background: linear-gradient(to right, #fb8c00, #ef6c00);
+  transform: scale(1.05);
 }
 
-.doctor-login {
-  background: linear-gradient(to right, #388e3c, #2e7d32);
+/* Connect Wallet Button */
+.wallet-button {
+  background: linear-gradient(to right, #66bb6a, #43a047);
   color: white;
-  font-weight: bold;
-  border: 2px solid #388e3c;
 }
 
-.doctor-login:hover {
-  background: linear-gradient(to right, #2e7d32, #1b5e20);
-  transform: translateY(-2px);
+.wallet-button:hover {
+  background: linear-gradient(to right, #43a047, #2e7d32);
+  transform: scale(1.05);
 }
 
+/* Logout Button */
 .logout-button {
-  background-color: #e74c3c;
+  background: linear-gradient(to right, #e74c3c, #c0392b);
   color: white;
-  padding: 10px 20px;
-  font-size: 1em;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.3s ease;
 }
 
 .logout-button:hover {
-  background-color: #c0392b;
+  background: linear-gradient(to right, #c0392b, #a93226);
+  transform: scale(1.05);
 }
 
+/* Footer */
 .footer {
   background-color: #f5f5f5;
   padding: 10px 20px;

@@ -1,5 +1,6 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState } from "react";
 import { AuthContext } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import {
   isPatientRegistered,
   isProviderRegistered,
@@ -8,114 +9,86 @@ import {
 
 const WalletConnect = () => {
   const { authState, setAuthState } = useContext(AuthContext);
-  const [roleMessage, setRoleMessage] = useState(""); // State to store feedback message
+  const [roleMessage, setRoleMessage] = useState("");
+  const navigate = useNavigate();
 
-  // Connect wallet and determine user role
   const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        if (accounts.length > 0) {
-          const userAddress = accounts[0];
-          const userRole = await fetchUserRole(userAddress);
-  
-          if (userRole) {
-            setAuthState({
-              isAuthenticated: true,
-              userRole,
-              userAddress,
-            });
-  
-            // Redirect based on user role
-            if (userRole === "doctor") {
-              window.location.href = "/doctor/request-access";
-            } else if (userRole === "patient") {
-              window.location.href = "/patient/dashboard";
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error connecting wallet:", error);
-      }
-    } else {
+    if (!window.ethereum) {
       alert("Please install a MetaMask wallet to interact!");
+      return;
+    }
+
+    try {
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+
+      if (accounts.length > 0) {
+        const userAddress = accounts[0];
+        const userRole = await fetchUserRole(userAddress);
+
+        if (userRole) {
+          setAuthState({ isAuthenticated: true, userRole, userAddress });
+          setRoleMessage(`Success! Wallet connected as ${userRole}. Redirecting...`);
+
+          setTimeout(() => {
+            navigate(userRole === "doctor" ? "/doctor/request-access" : "/patient/dashboard");
+          }, 3000); // 3-second delay
+        } else {
+          setRoleMessage("Unrecognized wallet. Please register as a user.");
+        }
+      }
+    } catch (error) {
+      console.error("Error connecting wallet:", error);
+      setRoleMessage("Failed to connect wallet. Please try again.");
     }
   };
-  
 
-  // Fetch user role based on wallet address
   const fetchUserRole = async (address) => {
     try {
-      const isRegisteredProvider = await isProviderRegistered(address);
-      if (isRegisteredProvider) {
-        const isVerifiedProvider = await isProviderVerified(address);
-        return isVerifiedProvider ? "doctor" : "unverified";
+      if (await isProviderRegistered(address)) {
+        return (await isProviderVerified(address)) ? "doctor" : "unverified";
       }
-
-      const isRegisteredPatient = await isPatientRegistered(address);
-      if (isRegisteredPatient) {
-        return "patient";
-      }
-
-      return null;
+      return (await isPatientRegistered(address)) ? "patient" : null;
     } catch (error) {
       console.error("Error fetching user role:", error);
       return null;
     }
   };
 
-  // Clear app state when resetting or switching wallets
-  const clearAppState = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    setAuthState({
-      isAuthenticated: false,
-      userRole: null,
-      userAddress: null,
-    });
-    setRoleMessage("");
-  };
-
-  // Handle MetaMask account or network changes
-  useEffect(() => {
-    if (window.ethereum) {
-      const handleAccountChange = (accounts) => {
-        if (accounts.length === 0) {
-          console.log("MetaMask disconnected. Clearing app state...");
-          clearAppState();
-        } else {
-          console.log("Account changed. Reloading...");
-          clearAppState();
-          connectWallet(); // Reconnect with the new account
-        }
-      };
-
-      const handleNetworkChange = () => {
-        console.log("Network changed. Clearing app state...");
-        clearAppState();
-      };
-
-      window.ethereum.on("accountsChanged", handleAccountChange);
-      window.ethereum.on("chainChanged", handleNetworkChange);
-
-      return () => {
-        window.ethereum.removeListener("accountsChanged", handleAccountChange);
-        window.ethereum.removeListener("chainChanged", handleNetworkChange);
-      };
-    }
-  },);
-
   return (
-    <div>
+    <div style={{ textAlign: "center", marginTop: "20px" }}>
       {!authState.isAuthenticated ? (
         <div>
-          <button onClick={connectWallet}>Connect Wallet</button>
-          {roleMessage && <p>{roleMessage}</p>} {/* Display feedback message */}
+          <button
+            onClick={connectWallet}
+            style={{
+              padding: "15px 30px",
+              fontSize: "1.1em",
+              border: "none",
+              borderRadius: "8px",
+              background: "linear-gradient(to right, #66bb6a, #43a047)",
+              color: "white",
+              cursor: "pointer",
+              boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+              transition: "all 0.3s ease",
+            }}
+          >
+            Connect Wallet
+          </button>
+          {roleMessage && <p style={{ marginTop: "15px", color: "#555" }}>{roleMessage}</p>}
         </div>
       ) : (
-        <p>Wallet Connected: {authState.userAddress}</p>
+        <p
+          style={{
+            fontSize: "1.2em",
+            color: "#43a047",
+            fontWeight: "bold",
+            marginTop: "20px",
+          }}
+        >
+          {roleMessage || `Wallet Connected: ${authState.userAddress}`}
+        </p>
       )}
     </div>
   );
