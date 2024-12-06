@@ -540,7 +540,6 @@ export const fetchPendingRequests = async (patientAddress) => {
     // Structure the events into a readable format
     const pendingRequests = events.map((event) => ({
       doctorAddress: event.args.providerAddress,
-      purposeHash: event.args.purposeHash,
       plainTextPurpose: event.args.plainTextPurpose || "Purpose not available",
       cid: event.args.cid,
     }));
