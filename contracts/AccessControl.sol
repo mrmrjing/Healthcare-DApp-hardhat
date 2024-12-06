@@ -26,7 +26,7 @@ contract AccessControl {
     event AccessRequested(
         address indexed patientAddress,
         address indexed providerAddress,
-        string plainTextPurpose:,
+        string plainTextPurpose, 
         string cid,
         uint256 timestamp
     );
