@@ -44,8 +44,6 @@ contract HealthcareProviderRegistry {
     }
 
     // Function for healthcare providers to register themselves
-    // - Requires the provider to not already be registered
-    // - Takes the CID for the provider's encrypted off-chain data as input
     function registerHealthcareProvider(string calldata dataCID, bytes calldata publicKey) external {
         require(!providers[msg.sender].isRegistered, "Provider already registered");
         providers[msg.sender] = HealthcareProvider({
@@ -60,7 +58,6 @@ contract HealthcareProviderRegistry {
     }
 
     // Function for the admin to verify a healthcare provider
-    // - Ensures the provider is registered before verifying
     function verifyHealthcareProvider(address providerAddress) external onlyAdmin {
         require(providers[providerAddress].isRegistered, "Provider not registered");
         require(!providers[providerAddress].isVerified, "Provider already verified");
@@ -78,7 +75,6 @@ contract HealthcareProviderRegistry {
     }
 
     // Function to check if a provider is verified
-    // - Publicly accessible
     function isProviderVerified(address providerAddress) external view returns (bool) {
         return providers[providerAddress].isVerified;
     }
@@ -88,22 +84,9 @@ contract HealthcareProviderRegistry {
         return providers[providerAddress].isRejected;
     }
 
-
     // Function to check if a provider is registered
-    // - Publicly accessible
     function isProviderRegistered(address providerAddress) external view returns (bool) {
         return providers[providerAddress].isRegistered;
-    }
-
-    // Function for a registered provider to update their off-chain data CID
-    function updateDataCID(string calldata newDataCID) external onlyRegisteredProvider {
-        providers[msg.sender].dataCID = newDataCID;
-        emit ProviderDataUpdated(msg.sender, newDataCID); // Emit an event for successful update
-    }
-
-    // Function for the admin to retrieve the data CID of a specific provider
-    function getProviderDataCID(address providerAddress) external view onlyAdmin returns (string memory) {
-        return providers[providerAddress].dataCID;
     }
 
     // Function to get all registered providers
@@ -111,7 +94,7 @@ contract HealthcareProviderRegistry {
         return providerAddresses; 
     }
 
-    // Function to get the public key of a specific provider, any user can call this function since public key is meant to be publicly accessible 
+    // Function to get the public key of a specific provider
     function getProviderPublicKey(address providerAddress) external view returns (bytes memory) {
         require(providers[providerAddress].isRegistered, "Provider not registered");
         return providers[providerAddress].publicKey;
