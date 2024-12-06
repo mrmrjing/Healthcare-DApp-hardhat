@@ -27,7 +27,6 @@ contract AccessControl {
     event AccessRequested(
         address indexed patientAddress,
         address indexed providerAddress,
-        bytes32 purposeHash,
         string plainTextPurpose, 
         string cid,
         uint256 timestamp
@@ -70,7 +69,6 @@ contract AccessControl {
 
     // Function for a healthcare provider to request access to a patient's data
     function requestAccess(address patientAddress, string memory purpose) external onlyVerifiedProvider {
-        bytes32 purposeHash = keccak256(abi.encodePacked(purpose));
         require(!accessRequests[patientAddress][msg.sender].isApproved, "Access already approved");
 
         accessRequests[patientAddress][msg.sender] = AccessRequest({
@@ -177,5 +175,4 @@ contract AccessControl {
         require(accessRequests[patientAddress][providerAddress].isApproved, "Access not granted.");
         return accessRequests[patientAddress][providerAddress].cid;
     }
-
 }
