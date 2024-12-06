@@ -79,7 +79,7 @@ contract AccessControl {
             timestamp: block.timestamp
         });
 
-        emit AccessRequested(patientAddress, msg.sender, purposeHash, purpose, "", block.timestamp);
+        emit AccessRequested(patientAddress, msg.sender, purpose, "", block.timestamp);
     }     
     
     // Function for a patient to approve a provider's access request, including the encrypted key and the CID 
