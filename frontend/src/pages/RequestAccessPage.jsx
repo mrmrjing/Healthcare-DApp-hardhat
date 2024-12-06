@@ -3,10 +3,9 @@ import { create } from "ipfs-http-client";
 import {
   requestAccess,
   getEncryptedKey,
-  getSigner,
   getPatientRecords,
   getAuthorizedCIDs,
-} from "../services/blockchain/contractService";
+} from "../services/contractService";
 import { AuthContext } from "../contexts/AuthContext";
 const { isAddress, toUtf8String } = require("ethers");
 const CryptoJS = require("crypto-js");
@@ -17,7 +16,6 @@ const RequestAccessPage = () => {
   const [purpose, setPurpose] = useState("");
   const [retrieveAddress, setRetrieveAddress] = useState("");
   const [privateKey, setPrivateKey] = useState("");
-  const [decryptedKey, setDecryptedKey] = useState("");
   const [message, setMessage] = useState("");
   const [decryptedRecords, setDecryptedRecords] = useState([]);
 
@@ -60,71 +58,146 @@ const RequestAccessPage = () => {
     try {
       console.log("[INFO] Initiating key retrieval process...");
       setMessage("");
-
+  
+      // Validate retrieve address
       if (!retrieveAddress || !isAddress(retrieveAddress)) {
         console.warn("[WARN] Invalid patient address provided for key retrieval:", retrieveAddress);
         setMessage("Please enter a valid patient address to retrieve the key.");
         return;
       }
-
+  
+      // Validate private key
       if (!privateKey) {
         console.warn("[WARN] No private key provided for decryption.");
         setMessage("Please provide your private key for decryption.");
         return;
       }
-
+  
       const normalizedPrivateKey = privateKey.startsWith("0x")
         ? privateKey.slice(2)
         : privateKey;
-
+  
       console.log("[DEBUG] Normalized private key:", normalizedPrivateKey);
-
+  
       // Fetch provider address
-      const providerAddress = await getProviderAddress();
-
-      // Fetch encrypted symmetric key
-      const encryptedKey = await getEncryptedKey(providerAddress, retrieveAddress);
-
-      // Decrypt symmetric key
-      const decryptedSymmetricKey = decryptKey(encryptedKey, normalizedPrivateKey);
-      if (!decryptedSymmetricKey) {
-        throw new Error("Symmetric key decryption returned null or undefined.");
-      }
-      setDecryptedKey(decryptedSymmetricKey);
-
-      setMessage("Decryption successful! Retrieving patient records...");
-
-      // Fetch patient records
-      const patientRecords = await getPatientRecords(retrieveAddress);
-      if (patientRecords.length === 0) {
-        console.warn("[WARN] No records found for the specified patient.");
-        setMessage("No medical records found for this patient.");
+      let providerAddress;
+      try {
+        providerAddress = await getProviderAddress();
+        console.log("[INFO] Provider address fetched successfully:", providerAddress);
+      } catch (error) {
+        console.error("[ERROR] Failed to fetch provider address:", error);
+        setMessage("Failed to fetch provider address. Ensure MetaMask is connected.");
         return;
       }
-
-      // Fetch authorized CID
-      const cid = await getAuthorizedCIDs(providerAddress, retrieveAddress);
-
+  
+      // Fetch encrypted symmetric key
+      let encryptedKey;
+      try {
+        encryptedKey = await getEncryptedKey(providerAddress, retrieveAddress);
+        console.log("[INFO] Encrypted symmetric key retrieved successfully.");
+      } catch (error) {
+        console.error("[ERROR] Failed to retrieve encrypted symmetric key:", error);
+        setMessage("Failed to retrieve the encrypted key. Ensure access is approved.");
+        return;
+      }
+  
+      // Decrypt symmetric key
+      let decryptedSymmetricKey;
+      try {
+        decryptedSymmetricKey = decryptKey(encryptedKey, normalizedPrivateKey);
+        if (!decryptedSymmetricKey) {
+          throw new Error("Decrypted symmetric key is null or undefined.");
+        }
+      } catch (error) {
+        console.error("[ERROR] Failed to decrypt symmetric key:", error);
+        setMessage("Failed to decrypt the symmetric key. Ensure your private key is correct.");
+        return;
+      }
+  
+      setMessage("Decryption successful! Retrieving patient records...");
+  
+      // Fetch patient records
+      let patientRecords;
+      try {
+        patientRecords = await getPatientRecords(retrieveAddress);
+        if (!patientRecords || patientRecords.length === 0) {
+          console.warn("[WARN] No patient records found.");
+          setMessage("No medical records found for this patient.");
+          return;
+        }
+        console.log(`[INFO] Fetched ${patientRecords.length} patient records.`);
+      } catch (error) {
+        console.error("[ERROR] Failed to fetch patient records:", error);
+        setMessage("Failed to fetch patient records. Please try again.");
+        return;
+      }
+  
+      // Fetch authorized CIDs
+      let cid;
+      try {
+        cid = await getAuthorizedCIDs(providerAddress, retrieveAddress);
+        if (!cid) {
+          throw new Error("Authorized CID is null or undefined.");
+        }
+        console.log("[INFO] Authorized CID retrieved successfully.");
+      } catch (error) {
+        console.error("[ERROR] Failed to fetch authorized CID:", error);
+        setMessage("Failed to fetch authorized CID for the patient.");
+        return;
+      }
+  
       // Decrypt patient records
-      const records = await Promise.all(
-        patientRecords.map(async (record) => {
-          const { CID } = record;
-          if (!CID) {
-            console.warn("[WARN] Missing CID in record:", record);
-            return null;
-          }
-          const encryptedContent = await fetchFromIPFS(CID);
-          return decryptRecord(encryptedContent, decryptedSymmetricKey);
-        })
-      );
-
-      setDecryptedRecords(records.filter((record) => record !== null));
+      let records;
+      try {
+        records = await Promise.all(
+          patientRecords.map(async (record) => {
+            const { CID } = record;
+            if (!CID) {
+              console.warn("[WARN] Missing CID in record:", record);
+              return null;
+            }
+            let encryptedContent;
+            try {
+              encryptedContent = await fetchFromIPFS(CID);
+              if (!encryptedContent) {
+                throw new Error(`Content for CID ${CID} is null or undefined.`);
+              }
+              console.log(`[INFO] Fetched encrypted content for CID: ${CID}`);
+            } catch (error) {
+              console.error(`[ERROR] Failed to fetch content from IPFS for CID: ${CID}`, error);
+              return null;
+            }
+  
+            try {
+              return decryptRecord(encryptedContent, decryptedSymmetricKey);
+            } catch (error) {
+              console.error(`[ERROR] Failed to decrypt record for CID: ${CID}`, error);
+              return null;
+            }
+          })
+        );
+  
+        const validRecords = records.filter((record) => record !== null);
+        if (validRecords.length === 0) {
+          throw new Error("No records could be decrypted successfully.");
+        }
+        setDecryptedRecords(validRecords);
+        console.log(`[INFO] Successfully decrypted ${validRecords.length} records.`);
+      } catch (error) {
+        console.error("[ERROR] Failed to decrypt patient records:", error);
+        setMessage(
+          "Failed to decrypt patient records. Ensure you have the correct key and access permissions."
+        );
+        return;
+      }
+  
       setMessage("Medical records retrieved and decrypted successfully!");
     } catch (error) {
-      console.error("[ERROR] Error retrieving or decrypting the key:", error);
-      setMessage("Failed to retrieve or decrypt the key. Ensure access is approved.");
+      console.error("[ERROR] An unexpected error occurred in handleRetrieveKey:", error);
+      setMessage("An unexpected error occurred while retrieving the key. Please try again.");
     }
   };
+  
 
   const fetchFromIPFS = async (cid) => {
     try {
@@ -240,7 +313,6 @@ const RequestAccessPage = () => {
       throw new Error("Failed to decrypt the symmetric key.");
     }
   };
-  
 
   const hexToUtf8 = (hex) => toUtf8String(hex);
 
@@ -281,15 +353,25 @@ const RequestAccessPage = () => {
       </div>
 
       {decryptedRecords.length > 0 && (
-        <div>
-          <h3>Decrypted Records</h3>
-          <ul>
-            {decryptedRecords.map((record, index) => (
-              <li key={index}>{record}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <div>
+        <h3>Decrypted Records (PDFs)</h3>
+        <ul>
+          {decryptedRecords.map((record, index) => {
+            // Create a Blob and Object URL for the PDF
+            const blob = new Blob([record], { type: "application/pdf" });
+            const url = URL.createObjectURL(blob);
+
+            return (
+              <li key={index}>
+                <a href={url} target="_blank" rel="noopener noreferrer">
+                  View PDF Record {index + 1}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    )}
 
       {message && <p>{message}</p>}
 

@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../../contexts/AuthContext";
+import { AuthContext } from "../contexts/AuthContext";
 import {
   getProviderRegistryEvents,
   isAuthorized,
   grantAccessToProvider,
   revokeAccessFromProvider,
   getMyMedicalRecords,
-} from "../../services/blockchain/contractService";
-import UploadMedicalRecord from "../Patient/UploadMedicalRecord";
-import GrantAccessPage from "../Patient/GrantAccessPage";
-import "../../styles/PatientDashboard.css";
+} from "../services/contractService";
+import UploadMedicalRecord from "../components/Patient/UploadMedicalRecord";
+import GrantAccess from "../components/Patient/GrantAccess";
+import "../styles/PatientDashboard.css";
 
 const PatientDashboard = () => {
   const { authState, logout } = useContext(AuthContext);
@@ -21,22 +21,30 @@ const PatientDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Fetch data when the component mounts or authState changes
   useEffect(() => {
     const patientAddress = authState?.userAddress;
+
     if (patientAddress) {
       fetchDashboardData(patientAddress);
       fetchMedicalRecords(patientAddress);
+    } else {
+      console.warn("[WARN] Patient address is missing in authState.");
     }
   }, [authState?.userAddress]);
 
+  /**
+   * Fetch dashboard data, including access logs and permissions.
+   * @param {string} patientAddress - The address of the patient.
+   */
   const fetchDashboardData = async (patientAddress) => {
     try {
+      console.info("[INFO] Fetching dashboard data for patient:", patientAddress);
       setLoading(true);
 
-      // Fetch provider registration events
       const providerEvents = await getProviderRegistryEvents();
+      console.debug("[DEBUG] Provider registry events:", providerEvents);
 
-      // Filter to include only those with explicit access granted
       const filteredEvents = await Promise.all(
         providerEvents.map(async (event) => {
           const hasAccess = await isAuthorized(patientAddress, event.address);
@@ -44,10 +52,9 @@ const PatientDashboard = () => {
         })
       );
 
-      // Remove null values (providers without access)
       const authorizedProviders = filteredEvents.filter(Boolean);
 
-      // Prepare access logs
+      // Prepare access logs and permissions
       setAccessLogs(
         authorizedProviders.map((event) => ({
           id: event.address,
@@ -56,61 +63,89 @@ const PatientDashboard = () => {
         }))
       );
 
-      // Prepare permissions list
-      const permissions = authorizedProviders.map((event) => ({
-        id: event.address,
-        name: event.dataCID,
-        type: "Provider",
-        access: true, // Explicitly granted access
-      }));
-      setPermissions(permissions);
+      setPermissions(
+        authorizedProviders.map((event) => ({
+          id: event.address,
+          name: event.dataCID || "Unknown",
+          type: "Provider",
+          access: true,
+        }))
+      );
     } catch (err) {
-      console.error("Failed to fetch dashboard data:", err);
+      console.error("[ERROR] Failed to fetch dashboard data:", err);
       setError("Failed to fetch data from the blockchain.");
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Fetch the patient's medical records.
+   * @param {string} patientAddress - The address of the patient.
+   */
   const fetchMedicalRecords = async (patientAddress) => {
     try {
-      console.log("[DEBUG] Fetching medical records for patient:", patientAddress);
-  
-      // Fetch medical records from the blockchain
+      console.info("[INFO] Fetching medical records for patient:", patientAddress);
+
       const records = await getMyMedicalRecords(patientAddress);
-      console.log("[DEBUG] Fetched medical records:", records);
-      setMedicalRecords(records);
+      console.debug("[DEBUG] Medical records fetched:", records);
+
+      setMedicalRecords(records || []);
     } catch (err) {
       console.error("[ERROR] Failed to fetch medical records:", err);
       setError("Failed to fetch medical records.");
     }
   };
-  
 
+  /**
+   * Toggle permission for a provider (grant/revoke).
+   * @param {string} providerAddress - The address of the provider.
+   * @param {boolean} currentAccess - Current access status of the provider.
+   */
   const togglePermission = async (providerAddress, currentAccess) => {
     try {
+      console.info(
+        `[INFO] ${currentAccess ? "Revoking" : "Granting"} access for provider:`,
+        providerAddress
+      );
+
       if (currentAccess) {
         await revokeAccessFromProvider(providerAddress);
       } else {
         await grantAccessToProvider(providerAddress);
       }
+
+      // Update permissions state
       setPermissions((prevPermissions) =>
         prevPermissions.map((perm) =>
           perm.id === providerAddress ? { ...perm, access: !perm.access } : perm
         )
       );
+
+      console.info(`[INFO] Access ${currentAccess ? "revoked" : "granted"} successfully.`);
     } catch (err) {
+      console.error(
+        `[ERROR] Failed to ${currentAccess ? "revoke" : "grant"} permission for provider:`,
+        providerAddress,
+        err
+      );
       setError(`Failed to ${currentAccess ? "revoke" : "grant"} permission.`);
     }
   };
 
+  /**
+   * Log out the user and navigate to the home page.
+   */
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
+  /**
+   * Refresh the medical records list after a successful upload.
+   */
   const handleUploadSuccess = () => {
-    // Refresh the medical records list after a successful upload
+    console.info("[INFO] Refreshing medical records after successful upload.");
     fetchMedicalRecords(authState?.userAddress);
   };
 
@@ -127,7 +162,6 @@ const PatientDashboard = () => {
 
       {/* Medical Record Upload Section */}
       <section className="section">
-        <h2>Upload Medical Record</h2>
         <UploadMedicalRecord
           patientAddress={authState?.userAddress}
           onUploadSuccess={handleUploadSuccess}
@@ -141,8 +175,12 @@ const PatientDashboard = () => {
           {medicalRecords.length > 0 ? (
             medicalRecords.map((record, index) => (
               <li key={index}>
-                <p><strong>CID:</strong> {record.CID}</p>
-                <p><strong>Timestamp:</strong> {record.timestamp}</p>
+                <p>
+                  <strong>CID:</strong> {record.CID}
+                </p>
+                <p>
+                  <strong>Timestamp:</strong> {record.timestamp}
+                </p>
               </li>
             ))
           ) : (
@@ -154,7 +192,7 @@ const PatientDashboard = () => {
       {/* Grant Access Section */}
       <section className="section">
         <h2>Pending Access Requests</h2>
-        <GrantAccessPage patientAddress={authState?.userAddress} />
+        <GrantAccess patientAddress={authState?.userAddress} />
       </section>
 
       {/* Recent Access Logs Section */}
@@ -188,9 +226,7 @@ const PatientDashboard = () => {
                 <td>{perm.type}</td>
                 <td>{perm.access ? "Granted" : "Revoked"}</td>
                 <td>
-                  <button
-                    onClick={() => togglePermission(perm.id, perm.access)}
-                  >
+                  <button onClick={() => togglePermission(perm.id, perm.access)}>
                     {perm.access ? "Revoke" : "Grant"}
                   </button>
                 </td>
