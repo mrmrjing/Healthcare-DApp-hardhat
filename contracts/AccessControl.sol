@@ -8,7 +8,6 @@ contract AccessControl {
     // Struct to represent an access request
     struct AccessRequest {
         bool isApproved;
-        bytes32 purposeHash;   // A hash representing the purpose of access
         bytes encryptedKey;    // The encrypted key (added to store encrypted key)
         string plainTextPurpose; // The plain text purpose of access (added to store plain text purpose)
         string cid; // The CID of the encrypted key stored in IPFS (added to store CID)
@@ -25,7 +24,6 @@ contract AccessControl {
     event AccessRequested(
         address indexed patientAddress,
         address indexed providerAddress,
-        bytes32 purposeHash,
         string plainTextPurpose, 
         string cid
     );
@@ -65,18 +63,16 @@ contract AccessControl {
 
     // Function for a healthcare provider to request access to a patient's data
     function requestAccess(address patientAddress, string memory purpose) external onlyVerifiedProvider {
-        bytes32 purposeHash = keccak256(abi.encodePacked(purpose));
         require(!accessRequests[patientAddress][msg.sender].isApproved, "Access already approved");
 
         accessRequests[patientAddress][msg.sender] = AccessRequest({
             isApproved: false,
-            purposeHash: purposeHash,
             plainTextPurpose: purpose,
             encryptedKey: "",
             cid: ""
         });
 
-        emit AccessRequested(patientAddress, msg.sender, purposeHash, purpose, "");
+        emit AccessRequested(patientAddress, msg.sender, purpose, "");
     }     
     
     // Function for a patient to approve a provider's access request, including the encrypted key and the CID 
@@ -157,5 +153,4 @@ contract AccessControl {
         require(accessRequests[patientAddress][providerAddress].isApproved, "Access not granted.");
         return accessRequests[patientAddress][providerAddress].cid;
     }
-
 }
