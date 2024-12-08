@@ -7,6 +7,7 @@ import {
   getAuthorizedCIDs,
 } from "../services/contractService";
 import { AuthContext } from "../contexts/AuthContext";
+import "../styles/PatientDashboard.css";
 const { isAddress, toUtf8String } = require("ethers");
 const CryptoJS = require("crypto-js");
 const EC = require("elliptic").ec;
@@ -317,7 +318,11 @@ const RequestAccessPage = () => {
   const hexToUtf8 = (hex) => toUtf8String(hex);
 
   return (
-    <div className="request-access-page">
+    <div className="dashboard-container">
+      <div className="header-container">
+        <h1>Doctor Dashboard</h1>
+        <div className="p-logout-button"><button onClick={logout}>Log Out</button></div>
+      </div>
       <h2>Request Access to Patient Records</h2>
       <div>
         <input
@@ -375,7 +380,6 @@ const RequestAccessPage = () => {
 
       {message && <p>{message}</p>}
 
-      <button onClick={logout}>Log Out</button>
     </div>
   );
 };

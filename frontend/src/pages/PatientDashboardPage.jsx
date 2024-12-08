@@ -1,22 +1,36 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
+import { create } from "ipfs-http-client";
+import { Buffer } from "buffer";
 import {
   getProviderRegistryEvents,
   isAuthorized,
-  grantAccessToProvider,
-  revokeAccessFromProvider,
+  checkAccess,
+  revokeAccess,
   getMyMedicalRecords,
+  fetchPendingRequests,
+  checkPending,
+  getApprovedEvents,
+  getRevokedEvents
 } from "../services/contractService";
 import UploadMedicalRecord from "../components/Patient/UploadMedicalRecord";
 import GrantAccess from "../components/Patient/GrantAccess";
 import "../styles/PatientDashboard.css";
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import Box from '@mui/material/Box';
+
+// Initialize IPFS client for local node
+const ipfs = create({ url: "http://localhost:5001/api/v0" });
 
 const PatientDashboard = () => {
   const { authState, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [tabValue, setTabValue] = useState('upload');
   const [accessLogs, setAccessLogs] = useState([]);
   const [permissions, setPermissions] = useState([]);
+  const [accessRequests, setAccessRequests] = useState([]);
   const [medicalRecords, setMedicalRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,6 +42,7 @@ const PatientDashboard = () => {
     if (patientAddress) {
       fetchDashboardData(patientAddress);
       fetchMedicalRecords(patientAddress);
+      fetchRequests(patientAddress);
     } else {
       console.warn("[WARN] Patient address is missing in authState.");
     }
@@ -47,28 +62,41 @@ const PatientDashboard = () => {
 
       const filteredEvents = await Promise.all(
         providerEvents.map(async (event) => {
-          const hasAccess = await isAuthorized(patientAddress, event.address);
+          const hasAccess = await checkAccess(patientAddress, event.address);
           return hasAccess ? event : null;
         })
       );
-
       const authorizedProviders = filteredEvents.filter(Boolean);
 
-      // Prepare access logs and permissions
-      setAccessLogs(
-        authorizedProviders.map((event) => ({
-          id: event.address,
-          date: new Date().toLocaleDateString(),
-          action: `Access granted to ${event.address}`,
-        }))
-      );
+      await Promise.all(authorizedProviders.map(async (e)=>{
+        const docData = await getIPFSdata(e.dataCID);
+        e["docName"] = docData.name
+      }))
 
       setPermissions(
         authorizedProviders.map((event) => ({
           id: event.address,
-          name: event.dataCID || "Unknown",
+          name: event.docName || "Unknown",
           type: "Provider",
           access: true,
+        }))
+      );
+      // get approve and revoke logs
+      const approveEvents = await getApprovedEvents(patientAddress)
+      const revokeEvents = await getRevokedEvents(patientAddress)
+      const logHistory = approveEvents.concat(revokeEvents)
+      console.log("loghistory", logHistory)
+      if (logHistory.length > 1){
+        logHistory.sort((a, b) => {
+          return Number(a.date) - Number(b.date)
+        })
+      }
+      //Prepare access logs and permissions
+      setAccessLogs(
+        logHistory.map((event) => ({
+          id: event.doctorAddress,
+          date: event.date ? new Date(Number(event.date) * 1000).toString() : "invalid date",
+          action: event.action === "Approved" ? `Access granted to ${event.doctorAddress}` : `Revoked access to ${event.doctorAddress}`,
         }))
       );
     } catch (err) {
@@ -77,6 +105,65 @@ const PatientDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReqUpdate = (newarr) => { setAccessRequests(newarr)}
+
+  const getIPFSdata = async (cid) =>{
+    const chunks = [];
+    for await (const chunk of ipfs.cat(cid)) {
+      chunks.push(chunk);
+    }
+    // Combine chunks and convert to a string (assuming the data is text-based)
+    const data = Buffer.concat(chunks).toString();
+    const dataobj = JSON.parse(data)
+    return dataobj;
+  }
+
+  const fetchRequests = async (patientAddress) => {
+    try {
+      console.info("[INFO] Fetching requests for patient:", patientAddress);
+      const reqs = await fetchPendingRequests(patientAddress);
+      const pengingRequests = await Promise.all(
+        reqs.map(async (req) => {
+          const isPending = await checkPending(patientAddress, req.doctorAddress);
+          return isPending ? req : null;
+        })
+      ).then((resolvedReqs) => resolvedReqs.filter(req => req !== null));
+      console.log("pending: ", pengingRequests)
+      const providerRegistryData = await getProviderRegistryEvents()
+      const newReqs = await Promise.all(
+        pengingRequests.map(async (req)=>{
+          // Find all matching providers for the current req
+          const matchingProvider = providerRegistryData.find((provider) => {
+            return req.doctorAddress === provider.address
+          });
+          if (matchingProvider){
+            try{
+              const docData = await getIPFSdata(matchingProvider.dataCID);
+              return {
+                ...req,
+                docName: docData.name
+              };
+            } catch (error) {
+              console.log("Could not get IPFS data:", error)
+              throw "ipfs error";
+            }
+          } else{
+            throw "no doc data";
+          }
+        })
+      )
+      console.log("newreqs", newReqs)
+      setAccessRequests(newReqs || []);
+    } catch (err){
+      console.error("[ERROR] Failed to get access requests:", err);
+      setError("Failed to get access requests.");
+    }
+  }
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
   };
 
   /**
@@ -102,7 +189,7 @@ const PatientDashboard = () => {
    * @param {string} providerAddress - The address of the provider.
    * @param {boolean} currentAccess - Current access status of the provider.
    */
-  const togglePermission = async (providerAddress, currentAccess) => {
+  const revokePermission = async (providerAddress, currentAccess) => {
     try {
       console.info(
         `[INFO] ${currentAccess ? "Revoking" : "Granting"} access for provider:`,
@@ -110,16 +197,17 @@ const PatientDashboard = () => {
       );
 
       if (currentAccess) {
-        await revokeAccessFromProvider(providerAddress);
-      } else {
-        await grantAccessToProvider(providerAddress);
+        await revokeAccess(providerAddress);
+        //await revokeAccessFromProvider(providerAddress);
+        const isauthval = await isAuthorized(authState?.userAddress, providerAddress);
+        const hasaccessval = await checkAccess(authState?.userAddress, providerAddress);
+        console.log("isAuthorised ", isauthval);
+        console.log("hashaccess ", hasaccessval);
       }
 
-      // Update permissions state
-      setPermissions((prevPermissions) =>
-        prevPermissions.map((perm) =>
-          perm.id === providerAddress ? { ...perm, access: !perm.access } : perm
-        )
+      //Update permissions state
+      setPermissions(prevPermissions =>
+        prevPermissions.filter(perm => perm.id !== providerAddress)
       );
 
       console.info(`[INFO] Access ${currentAccess ? "revoked" : "granted"} successfully.`);
@@ -154,22 +242,43 @@ const PatientDashboard = () => {
 
   return (
     <div className="dashboard-container">
-      <div className="logout-button">
-        <button onClick={handleLogout}>Log Out</button>
+      <div className="header-container">
+        <h1>Patient Dashboard</h1>
+        <div className="p-logout-button"><button onClick={handleLogout}>Log Out</button></div>
       </div>
-
-      <h1>Patient Dashboard</h1>
+      {/* <div className="logout-button">
+        <button onClick={handleLogout}>Log Out</button>
+      </div> */}
+      {/* <h1>Patient Dashboard</h1> */}
 
       {/* Medical Record Upload Section */}
-      <section className="section">
+      <Box sx={{ width: '100%' }}>
+        <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            textColor="secondary"
+            indicatorColor="secondary"
+            aria-label="secondary tabs example"
+            variant="scrollable"
+            scrollButtons="auto"
+            centere
+          >
+            <Tab value="upload" label="Upload" sx={{maxWidth: "180px"}}/>
+            <Tab value="records" label="Records" sx={{maxWidth: "180px"}}/>
+            <Tab value="requests" label="Requests" sx={{maxWidth: "180px"}}/>
+            <Tab value="history" label="Access History" sx={{maxWidth: "180px"}}/>
+          </Tabs>
+      </Box>
+      {tabValue === "upload" ? <section className="section">
         <UploadMedicalRecord
           patientAddress={authState?.userAddress}
           onUploadSuccess={handleUploadSuccess}
+          changeTab={setTabValue}
         />
-      </section>
+      </section>:''}
 
       {/* Medical Records List */}
-      <section className="section">
+      {tabValue === 'records'?<section className="section">
         <h2>Your Medical Records</h2>
         <ul>
           {medicalRecords.length > 0 ? (
@@ -187,16 +296,10 @@ const PatientDashboard = () => {
             <p>No medical records found.</p>
           )}
         </ul>
-      </section>
-
-      {/* Grant Access Section */}
-      <section className="section">
-        <h2>Pending Access Requests</h2>
-        <GrantAccess patientAddress={authState?.userAddress} />
-      </section>
+      </section>:''}
 
       {/* Recent Access Logs Section */}
-      <section className="section">
+      {tabValue === 'history' ? <section className="section">
         <h2>Recent Access Logs</h2>
         <ul>
           {accessLogs.map((log) => (
@@ -205,36 +308,42 @@ const PatientDashboard = () => {
             </li>
           ))}
         </ul>
-      </section>
+      </section>: ''}
 
       {/* Manage Permissions Section */}
-      <section className="section">
-        <h2>Manage Permissions</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Access</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {permissions.map((perm) => (
-              <tr key={perm.id}>
-                <td>{perm.name}</td>
-                <td>{perm.type}</td>
-                <td>{perm.access ? "Granted" : "Revoked"}</td>
-                <td>
-                  <button onClick={() => togglePermission(perm.id, perm.access)}>
-                    {perm.access ? "Revoke" : "Grant"}
-                  </button>
-                </td>
+      {tabValue === 'requests' ? <div>
+        <section className="section">
+          <h2>Manage Permissions</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Access</th>
+                <th>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+            </thead>
+            <tbody>
+              {permissions.map((perm) => (
+                <tr key={perm.id}>
+                  <td>{perm.name}</td>
+                  <td>{perm.type}</td>
+                  <td>{perm.access ? "Granted" : "Revoked"}</td>
+                  <td>
+                    <button onClick={() => revokePermission(perm.id, perm.access)} className={perm.access ? "revoke-button" : ""}>
+                      {perm.access ? "Revoke" : "Grant"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+        {/* Grant Access Section */}
+        <section className="section">
+          <GrantAccess patientAddress={authState?.userAddress} accessRequests={accessRequests} medicalRecords={medicalRecords} setPermissions={setPermissions} updateReqs={handleReqUpdate}/>
+        </section>
+      </div>:''}
     </div>
   );
 };
