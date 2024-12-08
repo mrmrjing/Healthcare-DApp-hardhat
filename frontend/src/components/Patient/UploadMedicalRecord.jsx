@@ -6,7 +6,7 @@ import CryptoJS from "crypto-js";
 // Initialize IPFS client for local node
 const ipfs = create({ url: "http://localhost:5001/api/v0" });
 
-const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
+const UploadMedicalRecord = ({ patientAddress, onUploadSuccess, changeTab }) => {
   const [file, setFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
@@ -114,6 +114,9 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess }) => {
       const result = await ipfs.add(encryptedFile);
       const cid = result.cid.toString(); // Convert CID to string for storage
       console.log("[INFO] Encrypted file successfully uploaded to IPFS. CID:", cid);
+      if (cid){
+        changeTab('records')
+      }
       return cid;
     } catch (error) {
       console.error("[ERROR] IPFS upload failed:", error);

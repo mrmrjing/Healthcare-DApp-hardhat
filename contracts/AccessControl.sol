@@ -8,10 +8,12 @@ contract AccessControl {
     // Struct to represent an access request
     struct AccessRequest {
         bool isApproved;
+        bool isPending;
         bytes32 purposeHash;   // A hash representing the purpose of access
         bytes encryptedKey;    // The encrypted key (added to store encrypted key)
         string plainTextPurpose; // The plain text purpose of access (added to store plain text purpose)
         string cid; // The CID of the encrypted key stored in IPFS (added to store CID)
+        uint256 timestamp;
     }
 
     // Mapping to store access requests: patient -> provider -> access request details
@@ -32,11 +34,13 @@ contract AccessControl {
     event AccessApproved(
         address indexed patientAddress,
         address indexed providerAddress,
-        bytes encryptedKey
+        bytes encryptedKey,
+        uint256 timestamp
     );
     event AccessRevoked(
         address indexed patientAddress,
-        address indexed providerAddress
+        address indexed providerAddress,
+        uint256 timestamp
     );
 
     // Modifier to allow only registered patients to perform certain actions
@@ -70,10 +74,12 @@ contract AccessControl {
 
         accessRequests[patientAddress][msg.sender] = AccessRequest({
             isApproved: false,
+            isPending: true,
             purposeHash: purposeHash,
             plainTextPurpose: purpose,
             encryptedKey: "",
-            cid: ""
+            cid: "",
+            timestamp: block.timestamp
         });
 
         emit AccessRequested(patientAddress, msg.sender, purposeHash, purpose, "");
@@ -91,11 +97,13 @@ contract AccessControl {
 
         // Approve the access request and store the encrypted key
         accessRequests[msg.sender][providerAddress].isApproved = true;
+        accessRequests[msg.sender][providerAddress].isPending = false;
         accessRequests[msg.sender][providerAddress].encryptedKey = encryptedKey;
         accessRequests[msg.sender][providerAddress].cid = cid;
+        accessRequests[msg.sender][providerAddress].timestamp = block.timestamp;
 
         // Emit an event for the approval, including the encrypted key
-        emit AccessApproved(msg.sender, providerAddress, encryptedKey);
+        emit AccessApproved(msg.sender, providerAddress, encryptedKey, block.timestamp);
     }
 
     // Function for a patient to revoke a provider's access
@@ -107,10 +115,12 @@ contract AccessControl {
 
         // Revoke the access
         accessRequests[msg.sender][providerAddress].isApproved = false;
+        accessRequests[msg.sender][providerAddress].isPending = false;
         accessRequests[msg.sender][providerAddress].encryptedKey = ""; // Clear the encrypted key
+        accessRequests[msg.sender][providerAddress].timestamp = block.timestamp;
 
         // Emit an event for the revocation
-        emit AccessRevoked(msg.sender, providerAddress);
+        emit AccessRevoked(msg.sender, providerAddress, block.timestamp);
     }
 
     // Function to check if a provider has access to a patient's data
@@ -120,6 +130,15 @@ contract AccessControl {
         returns (bool)
     {
         return accessRequests[patientAddress][providerAddress].isApproved;
+    }
+
+    // Function to check if a request is pending
+    function checkPending(address patientAddress, address providerAddress)
+        external
+        view
+        returns (bool)
+    {
+        return accessRequests[patientAddress][providerAddress].isPending;
     }
 
     // Function to retrieve the encrypted key for a provider-patient pair
