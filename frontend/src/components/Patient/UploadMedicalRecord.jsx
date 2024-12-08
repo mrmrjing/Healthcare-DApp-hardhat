@@ -44,13 +44,7 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess, changeTab }) => 
       const cid = await uploadToIPFS(encryptedFile);
       console.log("[INFO] File uploaded to IPFS. CID:", cid);
 
-      // Step 4: Encrypt the symmetric key with the master password
-      const encryptedKey = CryptoJS.AES.encrypt(symmetricKey, masterPassword).toString();
-
-      // Step 5: Save CID and encrypted key locally
-      saveEncryptionKey(cid, encryptedKey);
-
-      // Step 6: Record the CID on the blockchain
+      // Step 4: Record the CID on the blockchain
       await uploadMedicalRecord(patientAddress, cid);
       console.log("[INFO] Medical record successfully stored on blockchain.");
 
@@ -122,14 +116,6 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess, changeTab }) => 
       console.error("[ERROR] IPFS upload failed:", error);
       throw error;
     }
-  };
-
-  // Save the encrypted key locally
-  const saveEncryptionKey = (cid, encryptedKey) => {
-    console.log("[INFO] Saving encrypted key locally...");
-    const storedKeys = JSON.parse(localStorage.getItem("encryptionKeys") || "{}");
-    storedKeys[cid] = encryptedKey;
-    localStorage.setItem("encryptionKeys", JSON.stringify(storedKeys));
   };
 
   return (
