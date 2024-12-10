@@ -32,12 +32,6 @@ contract HealthcareProviderRegistry {
         _;
     }
 
-    // Modifier to restrict certain functions to registered providers
-    modifier onlyRegisteredProvider() {
-        require(providers[msg.sender].isRegistered, "Caller is not a registered provider");
-        _;
-    }
-
     // Constructor sets the contract deployer as the admin
     constructor() {
         admin = msg.sender;
