@@ -107,21 +107,12 @@ contract AccessControl {
     }
 
     // Function to check if a provider has access to a patient's data
-    function checkAccess(address patientAddress, address providerAddress)
-        external
-        view
-        returns (bool)
-    {
+    function checkAccess(address patientAddress, address providerAddress) external view returns (bool) {
         return accessRequests[patientAddress][providerAddress].isApproved;
     }
 
     // Function to retrieve the encrypted key for a provider-patient pair
-    function getEncryptedKey(address providerAddress, address patientAddress)
-        external
-        view
-        onlyVerifiedProvider
-        returns (bytes memory)
-    {
+    function getEncryptedKey(address providerAddress, address patientAddress) external view onlyVerifiedProvider returns (bytes memory) {
         require(
             accessRequests[patientAddress][providerAddress].isApproved,
             "Access not granted"
@@ -131,22 +122,12 @@ contract AccessControl {
     }
 
     // Function to retrieve the cid for a specific access request
-    function getCid(address patientAddress, address providerAddress)
-        external
-        view
-        onlyVerifiedProvider
-        returns (string memory)
-    {
+    function getCid(address patientAddress, address providerAddress) external view onlyVerifiedProvider returns (string memory) {
         return accessRequests[patientAddress][providerAddress].cid;
     }
 
     // Function to fetch CIDs that a provider has access to 
-    function getAuthorizedCIDs(address providerAddress, address patientAddress) 
-        external 
-        view 
-        onlyVerifiedProvider 
-        returns (string memory) 
-    {
+    function getAuthorizedCIDs(address providerAddress, address patientAddress) external view onlyVerifiedProvider returns (string memory) {
         require(accessRequests[patientAddress][providerAddress].isApproved, "Access not granted.");
         return accessRequests[patientAddress][providerAddress].cid;
     }
