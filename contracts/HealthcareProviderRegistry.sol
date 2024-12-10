@@ -23,7 +23,6 @@ contract HealthcareProviderRegistry {
     // Events to log significant actions
     event ProviderRegistered(address indexed providerAddress, string dataCID, bytes publicKey);
     event ProviderVerified(address indexed providerAddress);
-    event ProviderDataUpdated(address indexed providerAddress, string newDataCID);
     event ProviderRejected(address indexed providerAddress);
 
     // Modifier to restrict certain functions to the admin only
