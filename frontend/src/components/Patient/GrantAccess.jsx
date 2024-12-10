@@ -11,7 +11,7 @@ import { hexlify, toUtf8Bytes } from "ethers";
 // Initialize elliptic curve for secp256k1 (Ethereum's curve)
 const ec = new EC("secp256k1");
 
-const GrantAccess = ({ patientAddress, accessRequests, medicalRecords, setPermissions, updateReqs }) => {
+const GrantAccess = ({ accessRequests, medicalRecords, setPermissions, updateReqs, setAccessLogs }) => {
   const [selectedCIDs, setSelectedCIDs] = useState({});
   const [message, setMessage] = useState("");
   const [masterPassword, setMasterPassword] = useState("");
@@ -100,6 +100,11 @@ const GrantAccess = ({ patientAddress, accessRequests, medicalRecords, setPermis
       setPermissions(prevPermissions => [...prevPermissions, newPerm])
       const newRequests = accessRequests.filter(req => req.doctorAddress !== request.doctorAddress)
       updateReqs(newRequests)
+      setAccessLogs({
+        id: request.doctorAddress,
+        action: `Access granted to ${request.doctorAddress}`,
+        date: new Date().toString()
+      })
 
       //setAccessRequests(prev => prev.filter((_, i) => i !== index));
       setMessage("Access approved successfully.");
@@ -118,6 +123,11 @@ const GrantAccess = ({ patientAddress, accessRequests, medicalRecords, setPermis
     try {
       console.log("[INFO] Revoking access for doctor:", doctorAddress);
       await revokeAccess(doctorAddress);
+      setAccessLogs({
+        id: doctorAddress,
+        action: `Revoked access to ${doctorAddress}`,
+        date: new Date().toString()
+      })
       
       //setAccessRequests(prev => prev.filter(request => request.doctorAddress !== doctorAddress));
       setMessage(`Access revoked for doctor: ${doctorAddress}`);
