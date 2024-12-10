@@ -9,7 +9,6 @@ contract AccessControl {
     struct AccessRequest {
         bool isApproved;
         bool isPending;
-        bytes32 purposeHash;   // A hash representing the purpose of access
         bytes encryptedKey;    // The encrypted key (added to store encrypted key)
         string plainTextPurpose; // The plain text purpose of access (added to store plain text purpose)
         string cid; // The CID of the encrypted key stored in IPFS (added to store CID)
@@ -73,7 +72,6 @@ contract AccessControl {
         accessRequests[patientAddress][msg.sender] = AccessRequest({
             isApproved: false,
             isPending: true,
-            purposeHash: purposeHash,
             plainTextPurpose: purpose,
             encryptedKey: "",
             cid: "",
@@ -121,15 +119,6 @@ contract AccessControl {
     // Function to check if a provider has access to a patient's data
     function checkAccess(address patientAddress, address providerAddress) external view returns (bool) {
         return accessRequests[patientAddress][providerAddress].isApproved;
-    }
-
-    // Function to check if a request is pending
-    function checkPending(address patientAddress, address providerAddress)
-        external
-        view
-        returns (bool)
-    {
-        return accessRequests[patientAddress][providerAddress].isPending;
     }
 
     // Function to check if a request is pending
