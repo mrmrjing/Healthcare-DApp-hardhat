@@ -108,6 +108,7 @@ const PatientDashboard = () => {
   };
 
   const handleReqUpdate = (newarr) => { setAccessRequests(newarr)}
+  const handleLogUpdate = (newItem) => { setAccessLogs((prevarray) => [...prevarray, newItem])}
 
   const getIPFSdata = async (cid) =>{
     const chunks = [];
@@ -359,7 +360,7 @@ const PatientDashboard = () => {
         </section>
         {/* Grant Access Section */}
         <section className="section">
-          <GrantAccess patientAddress={authState?.userAddress} accessRequests={accessRequests} medicalRecords={medicalRecords} setPermissions={setPermissions} updateReqs={handleReqUpdate}/>
+          <GrantAccess accessRequests={accessRequests} medicalRecords={medicalRecords} setPermissions={setPermissions} updateReqs={handleReqUpdate} setAccessLogs={handleLogUpdate}/>
         </section>
       </div>:''}
     </div>
