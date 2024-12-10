@@ -198,6 +198,7 @@ const PatientDashboard = () => {
           }
         })
       )
+    return newArray;
   }
 
   const handleTabChange = (event, newValue) => {
