@@ -76,10 +76,7 @@ contract AccessControl {
     }     
     
     // Function for a patient to approve a provider's access request, including the encrypted key and the CID 
-    function approveAccess(address providerAddress, bytes calldata encryptedKey, string calldata cid)
-        external
-        onlyRegisteredPatient
-    {
+    function approveAccess(address providerAddress, bytes calldata encryptedKey, string calldata cid) external onlyRegisteredPatient {
         require(
             !accessRequests[msg.sender][providerAddress].isApproved,
             "Access already approved"
