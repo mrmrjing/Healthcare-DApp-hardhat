@@ -144,7 +144,7 @@ const GrantAccess = ({ patientAddress, accessRequests, medicalRecords, setPermis
           <thead>
             <tr>
               <th>Doctor Name</th>
-              <th>Doctor Address</th>
+              <th>Date Requested</th>
               <th>Purpose</th>
               <th>Select Medical Records (CIDs)</th>
               <th>Actions</th>
@@ -154,7 +154,7 @@ const GrantAccess = ({ patientAddress, accessRequests, medicalRecords, setPermis
             {accessRequests.map((request, index) => (
               <tr key={index}>
                 <td>{request.docName}</td>
-                <td>{request.doctorAddress}</td>
+                <td>{request.date}</td>
                 <td>{request.plainTextPurpose}</td>
                 <td>
                   <select multiple onChange={e => handleCIDSelection(e, index)}>
