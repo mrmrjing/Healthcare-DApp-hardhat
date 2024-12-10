@@ -132,6 +132,15 @@ contract AccessControl {
         return accessRequests[patientAddress][providerAddress].isPending;
     }
 
+    // Function to check if a request is pending
+    function checkPending(address patientAddress, address providerAddress)
+        external
+        view
+        returns (bool)
+    {
+        return accessRequests[patientAddress][providerAddress].isPending;
+    }
+
     // Function to retrieve the encrypted key for a provider-patient pair
     function getEncryptedKey(address providerAddress, address patientAddress) external view onlyVerifiedProvider returns (bytes memory) {
         require(
