@@ -9,14 +9,12 @@ describe("AccessControl", function () {
     beforeEach(async function () {
         // Get signers for test cases
         [owner, addr1, addr2] = await ethers.getSigners();
-        console.log("Signers:", owner.address, addr1.address, addr2.address);
 
         // Deploy the PatientRegistry contract
         const PatientRegistry = await ethers.getContractFactory("PatientRegistry");
         try {
             patientRegistry = await PatientRegistry.deploy();
             await patientRegistry.waitForDeployment(); // Wait until deployment completes
-            console.log("PatientRegistry deployed at:", await patientRegistry.getAddress());
         } catch (err) {
             console.error("Error deploying PatientRegistry:", err);
         }
@@ -26,7 +24,6 @@ describe("AccessControl", function () {
         providerRegistry = await HealthcareProviderRegistry.deploy();
         try {
             await providerRegistry.waitForDeployment(); // Wait until deployment completes
-            console.log("ProviderRegistry deployed at:", await providerRegistry.getAddress());
         } catch (err) {
             console.error("HealthcareProviderRegistry deployment failed:", err);
             throw err;
@@ -40,7 +37,6 @@ describe("AccessControl", function () {
         );
         try {
             await accessControl.waitForDeployment(); // Wait until deployment completes
-            console.log("AccessControl deployed at:", await accessControl.getAddress());
         } catch (err) {
             console.error("AccessControl deployment failed:", err);
             throw err;
