@@ -175,6 +175,11 @@ export const registerProvider = async (dataCID, publicKeyBytes) => {
     if (!dataCID || !publicKeyBytes) {
       throw new Error("Invalid arguments: dataCID or publicKeyBytes is missing.");
     }
+    //check if patient
+    const signer = await getSigner();
+    const patientAddress = signer.getAddress();
+    const isDoc = await isPatientRegistered(patientAddress);
+    if (isDoc) { throw new Error("This account is already registered as a Patient!")}
 
     const registry = await getContract("healthcareProviderRegistry");
     console.log("[INFO] Registering provider with CID:", dataCID);
@@ -299,10 +304,14 @@ export const registerPatient = async (dataCID) => {
     if (!dataCID) {
       throw new Error("Invalid argument: dataCID is missing.");
     }
+    //check if doctor
+    const signer = await getSigner();
+    const patientAddress = signer.getAddress();
+    const isDoc = await isProviderRegistered(patientAddress);
+    if (isDoc) { throw new Error("This account is already registered as a doctor!")}
 
     const patientRegistry = await getContract("patientRegistry");
     console.log("[INFO] Registering patient with CID:", dataCID);
-
     const tx = await patientRegistry.registerPatient(dataCID);
     await tx.wait();
 

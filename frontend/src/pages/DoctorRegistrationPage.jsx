@@ -119,6 +119,8 @@
             ? "Transaction rejected by the user."
             : error.message.includes("gas")
             ? "Transaction failed due to insufficient gas."
+            : error.message.includes("Patient")
+            ? String(error)
             : "An error occurred during registration. Please try again.";
         setFailureMessage(errorMessage);
       } finally {
