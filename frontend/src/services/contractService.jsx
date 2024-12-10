@@ -556,13 +556,13 @@ export const fetchPendingRequests = async (patientAddress) => {
     // Fetch all AccessRequested events for the patient
     const events = await accessControl.queryFilter(accessControl.filters.AccessRequested(patientAddress));
     console.log("[INFO] Pending access requests fetched:", events);
-
     // Structure the events into a readable format
     return  events.map((event) => ({
         doctorAddress: event.args.providerAddress,
         purposeHash: event.args.purposeHash,
         plainTextPurpose: event.args.plainTextPurpose || "Purpose not available",
         cid: event.args.cid,
+        date: event.args.timestamp
       }));
 
   } catch (error) {

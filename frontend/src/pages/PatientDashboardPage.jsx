@@ -129,7 +129,25 @@ const PatientDashboard = () => {
           const isPending = await checkPending(patientAddress, req.doctorAddress);
           return isPending ? req : null;
         })
-      ).then((resolvedReqs) => resolvedReqs.filter(req => req !== null));
+      ).then((resolvedReqs) => {
+        const allreqs = resolvedReqs.filter(req => req !== null);
+        const recentReqs = Object.values(allreqs.reduce((acc, req)=>{
+          if (!acc[req.doctorAddress] || Number(req.date) > Number(acc[req.doctorAddress].date)) {
+            acc[req.doctorAddress] = req;
+          }
+          return acc;
+        }, {}))
+        recentReqs.map((req)=>{
+          req["date"] =  new Date(Number(req.date) * 1000).toLocaleDateString("en-SG", {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        })
+        return recentReqs;
+      });
       console.log("pending: ", pengingRequests)
       const providerRegistryData = await getProviderRegistryEvents()
       const newReqs = await Promise.all(
