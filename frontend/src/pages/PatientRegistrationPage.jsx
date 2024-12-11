@@ -78,7 +78,7 @@ const PatientRegistration = () => {
 
       // Generate a systematic file name based on the current date and time
       const now = new Date();
-      const fileName = `${now.toISOString().replace(/[:.]/g, "-")}.json`;
+      const fileName = `patient-data--${now.toISOString().replace(/[:.]/g, "-")}.json`;
       const mfsPath = `/patient-data/${fileName}`;
 
       await ipfs.files.write(mfsPath, content, { create: true, parents: true });
