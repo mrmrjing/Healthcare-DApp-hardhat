@@ -70,7 +70,7 @@ const PatientDashboard = () => {
 
       await Promise.all(authorizedProviders.map(async (e)=>{
         const docData = await getIPFSdata(e.dataCID);
-        e["docName"] = docData.name
+        e["docName"] = docData.name;
       }))
 
       setPermissions(
@@ -82,21 +82,38 @@ const PatientDashboard = () => {
         }))
       );
       // get approve and revoke logs
-      const approveEvents = await getApprovedEvents(patientAddress)
-      const revokeEvents = await getRevokedEvents(patientAddress)
-      const logHistory = approveEvents.concat(revokeEvents)
-      console.log("loghistory", logHistory)
+      const approveEvents = await getApprovedEvents(patientAddress);
+      const revokeEvents = await getRevokedEvents(patientAddress);
+      const logHistory = approveEvents.concat(revokeEvents);
       if (logHistory.length > 1){
         logHistory.sort((a, b) => {
-          return Number(a.date) - Number(b.date)
+          return Number(a.date) - Number(b.date);
         })
       }
-      //Prepare access logs and permissions
+      //get access logs and doc details:
+      const logsWithName = await Promise.all(logHistory.map(async (log)=>{
+        const matchingProvider = providerEvents.find((provider) => {
+          return log.doctorAddress === provider.address
+        });
+        if(matchingProvider){
+          try{
+            const docData = await getIPFSdata(matchingProvider.dataCID);
+            return {
+              ...log,
+              docName: docData.name
+            };
+          } catch(error){
+            console.log("unable to get IPFS data. ", error);
+          }
+        } else{
+          throw new Error(`No such provider with id ${log.doctorAddress} registered!`);
+        }
+      }))
       setAccessLogs(
-        logHistory.map((event) => ({
+        logsWithName.map((event) => ({
           id: event.doctorAddress,
           date: event.date ? new Date(Number(event.date) * 1000).toString() : "invalid date",
-          action: event.action === "Approved" ? `Access granted to ${event.doctorAddress}` : `Revoked access to ${event.doctorAddress}`,
+          action: event.action === "Approved" ? `Access granted to ${event.docName}` : `Revoked access to ${event.docName}`,
         }))
       );
     } catch (err) {
@@ -149,10 +166,18 @@ const PatientDashboard = () => {
         })
         return recentReqs;
       });
-      console.log("pending: ", pengingRequests)
-      const providerRegistryData = await getProviderRegistryEvents()
-      const newReqs = await Promise.all(
-        pengingRequests.map(async (req)=>{
+      const newReqs = await getDocDetailsFromAddress(pengingRequests);
+      setAccessRequests(newReqs || []);
+    } catch (err){
+      console.error("[ERROR] Failed to get access requests:", err);
+      setError("Failed to get access requests.");
+    }
+  }
+
+  const getDocDetailsFromAddress = async (array) =>{
+    const providerRegistryData = await getProviderRegistryEvents()
+      const newArray = await Promise.all(
+        array.map(async (req)=>{
           // Find all matching providers for the current req
           const matchingProvider = providerRegistryData.find((provider) => {
             return req.doctorAddress === provider.address
@@ -173,12 +198,6 @@ const PatientDashboard = () => {
           }
         })
       )
-      console.log("newreqs", newReqs)
-      setAccessRequests(newReqs || []);
-    } catch (err){
-      console.error("[ERROR] Failed to get access requests:", err);
-      setError("Failed to get access requests.");
-    }
   }
 
   const handleTabChange = (event, newValue) => {
