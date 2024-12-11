@@ -108,16 +108,26 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess, changeTab }) => 
       const result = await ipfs.add(encryptedFile);
       const cid = result.cid.toString(); // Convert CID to string for storage
       console.log("[INFO] Encrypted file successfully uploaded to IPFS. CID:", cid);
-      if (cid){
-        changeTab('records')
+
+      // Add the uploaded file to MFS
+      const now = new Date();
+      const fileName = `medical-record-${now.toISOString().replace(/[:.]/g, "-")}.pdf`; 
+      const mfsPath = `/medical-records/${fileName}`;
+      await ipfs.files.cp(`/ipfs/${cid}`, mfsPath); // Copy file from IPFS to MFS
+
+      console.log("[INFO] File successfully added to IPFS MFS at:", mfsPath);
+
+      if (cid) {
+        changeTab("records");
       }
+
       return cid;
     } catch (error) {
-      console.error("[ERROR] IPFS upload failed:", error);
-      throw error;
+      console.error("[ERROR] IPFS upload via MFS failed:", error);
+      throw new Error("Failed to upload file to IPFS and add to MFS.");
     }
   };
-
+  
   return (
     <div className="upload-container">
       <h2>Upload Medical Record</h2>
