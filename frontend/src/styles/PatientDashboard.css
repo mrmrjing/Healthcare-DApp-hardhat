@@ -1,3 +1,9 @@
+.header-container{
+  display: flex;
+  gap: 40px;
+  justify-content: space-between;
+}
+
 .dashboard-container {
     padding: 20px;
     font-family: Arial, sans-serif;
@@ -7,8 +13,10 @@
     text-align: right;
     margin-bottom: 20px;
   }
-  
-  .logout-button button {
+  .revoke-button{
+    background-color: #f44336;
+  }
+  .p-logout-button button {
     background-color: #f44336;
     color: white;
     border: none;
@@ -40,8 +48,14 @@
     border-radius: 3px;
     cursor: pointer;
   }
-  
-  button:hover {
-    background-color: #005f75;
-  }
-  
+
+.doctor-section{
+  padding: 20px;
+  box-shadow: inset;
+}
+.input-section{
+  display: flex;
+  padding-bottom: 20px;
+  width: 100%;
+  gap: 20px;
+}

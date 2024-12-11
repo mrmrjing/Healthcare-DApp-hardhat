@@ -67,6 +67,11 @@ const LandingPage = () => {
             </button>
           )}
         </section>
+        <div className="break">
+          <hr className="break-section line"></hr>
+          <p className="break-word"> Do not have an account? </p>
+          <hr className="break-section line"></hr>
+        </div>
 
         <section className="role-section">
           <h2>{authState.isAuthenticated ? "You are logged in!" : "Get Started"}</h2>

@@ -55,7 +55,7 @@ body {
 .role-section h2,
 .privacy-section h2 {
   font-size: 2em;
-  color: #1e88e5;
+  color: #1570BF;
   margin-bottom: 10px;
 }
 
@@ -80,12 +80,16 @@ body {
   font-size: 1.1em;
   border: none;
   border-radius: 8px;
+  background: #118DF1;
   cursor: pointer;
   font-weight: bold;
   transition: all 0.3s ease;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   min-width: 200px;
   text-align: center;
+}
+.role-button:hover{
+  transform: scale(1.05);
 }
 
 /* Specific Button Styles */
@@ -114,7 +118,7 @@ body {
 
 /* Admin Button */
 .admin-button {
-  background: linear-gradient(to right, #ffa726, #fb8c00);
+  background: #F17511;
   color: white;
   margin-top: 20px;
 }
@@ -126,12 +130,21 @@ body {
 
 /* Connect Wallet Button */
 .wallet-button {
-  background: linear-gradient(to right, #66bb6a, #43a047);
+  background: linear-gradient(to right, #118DF1, #118DF1);
   color: white;
+  padding: 15px 30px;
+  font-size: 1.1em;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
 .wallet-button:hover {
-  background: linear-gradient(to right, #43a047, #2e7d32);
+  background: linear-gradient(to right, #118DF1, #118DF1);
   transform: scale(1.05);
 }
 
@@ -154,4 +167,27 @@ body {
   color: #666;
   font-size: 0.9em;
   border-top: 1px solid #ddd;
+}
+
+.break{
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  padding-top: 20px;
+  padding-bottom: 40px;
+  align-items: center;
+}
+.break-section{
+  flex-basis: 40%;
+}
+.break-word{
+  flex-basis: 20%;
+  color: grey;
+  font-size: small;
+}
+
+.line{
+  border: none;
+  border-top: 1px solid grey;
+  margin: 20px 0;
 }

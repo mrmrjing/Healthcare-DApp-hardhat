@@ -2,9 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   approveAccess,
   revokeAccess,
-  fetchPendingRequests,
-  getProviderPublicKey,
-  getMyMedicalRecords,
+  getProviderPublicKey
 } from "../../services/contractService";
 import CryptoJS from "crypto-js";
 import { ec as EC } from "elliptic";
@@ -13,52 +11,10 @@ import { hexlify, toUtf8Bytes } from "ethers";
 // Initialize elliptic curve for secp256k1 (Ethereum's curve)
 const ec = new EC("secp256k1");
 
-const GrantAccess = ({ patientAddress }) => {
-  const [accessRequests, setAccessRequests] = useState([]);
-  const [medicalRecords, setMedicalRecords] = useState([]);
+const GrantAccess = ({ accessRequests, medicalRecords, setPermissions, updateReqs, setAccessLogs }) => {
   const [selectedCIDs, setSelectedCIDs] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [message, setMessage] = useState("");
   const [masterPassword, setMasterPassword] = useState("");
-
-  console.log("[DEBUG] Component initialized with patientAddress:", patientAddress);
-
-  // Fetch access requests and medical records when component mounts or patientAddress changes
-  useEffect(() => {
-    const loadAccessRequests = async () => {
-      if (!patientAddress) {
-        console.warn("[WARN] Patient address is not defined.");
-        setError("Patient address is required to fetch access requests.");
-        return;
-      }
-
-      try {
-        console.log("[INFO] Loading access requests for patient:", patientAddress);
-        setLoading(true);
-
-        const [requests, records] = await Promise.all([
-          fetchPendingRequests(patientAddress),
-          getMyMedicalRecords(),
-        ]);
-
-        console.log("[DEBUG] Fetched pending requests:", requests);
-        console.log("[DEBUG] Fetched medical records:", records);
-
-        setAccessRequests(requests || []);
-        setMedicalRecords(records || []);
-      } catch (err) {
-        console.error("[ERROR] Failed to load access requests or medical records:", err);
-        setError(
-          "An error occurred while fetching access requests or medical records. Please try again later."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadAccessRequests();
-  }, [patientAddress]);
 
   // Handle the selection of CIDs
   const handleCIDSelection = (event, requestIndex) => {
@@ -135,8 +91,22 @@ const GrantAccess = ({ patientAddress }) => {
       await approveAccess(request.doctorAddress, encryptedKeyBytes, joinedCIDs);
 
       console.log("[INFO] Successfully approved access for doctor:", request.doctorAddress);
+      const newPerm = {
+        id: request.doctorAddress,
+        name: request.docName || "Unknown",
+        type: "Provider",
+        access: true,
+      }
+      setPermissions(prevPermissions => [...prevPermissions, newPerm])
+      const newRequests = accessRequests.filter(req => req.doctorAddress !== request.doctorAddress)
+      updateReqs(newRequests)
+      setAccessLogs({
+        id: request.doctorAddress,
+        action: `Access granted to ${request.doctorAddress}`,
+        date: new Date().toString()
+      })
 
-      setAccessRequests(prev => prev.filter((_, i) => i !== index));
+      //setAccessRequests(prev => prev.filter((_, i) => i !== index));
       setMessage("Access approved successfully.");
     } catch (error) {
       console.error("[ERROR] Failed to approve access:", error);
@@ -149,21 +119,23 @@ const GrantAccess = ({ patientAddress }) => {
   };
 
   // Revoke access for a specific doctor
-  const handleRevoke = async doctorAddress => {
+  const handleRevoke = async (doctorAddress) => {
     try {
       console.log("[INFO] Revoking access for doctor:", doctorAddress);
       await revokeAccess(doctorAddress);
-
-      setAccessRequests(prev => prev.filter(request => request.doctorAddress !== doctorAddress));
+      setAccessLogs({
+        id: doctorAddress,
+        action: `Revoked access to ${doctorAddress}`,
+        date: new Date().toString()
+      })
+      
+      //setAccessRequests(prev => prev.filter(request => request.doctorAddress !== doctorAddress));
       setMessage(`Access revoked for doctor: ${doctorAddress}`);
     } catch (err) {
       console.error("[ERROR] Failed to revoke access:", err);
       setMessage("An error occurred while revoking access.");
     }
   };
-
-  if (loading) return <p>Loading access requests...</p>;
-  if (error) return <p className="error">{error}</p>;
 
   return (
     <div className="grant-access-page">
@@ -181,7 +153,8 @@ const GrantAccess = ({ patientAddress }) => {
         <table className="access-requests-table">
           <thead>
             <tr>
-              <th>Doctor Address</th>
+              <th>Doctor Name</th>
+              <th>Date Requested</th>
               <th>Purpose</th>
               <th>Select Medical Records (CIDs)</th>
               <th>Actions</th>
@@ -190,7 +163,8 @@ const GrantAccess = ({ patientAddress }) => {
           <tbody>
             {accessRequests.map((request, index) => (
               <tr key={index}>
-                <td>{request.doctorAddress}</td>
+                <td>{request.docName}</td>
+                <td>{request.date}</td>
                 <td>{request.plainTextPurpose}</td>
                 <td>
                   <select multiple onChange={e => handleCIDSelection(e, index)}>
@@ -200,7 +174,7 @@ const GrantAccess = ({ patientAddress }) => {
                   </select>
                 </td>
                 <td>
-                  <button onClick={() => handleApprove(request, index)} className="approve-button">Approve</button>
+                  <button disabled={!masterPassword} onClick={() => handleApprove(request, index)} className="approve-button">Approve</button>
                   <button onClick={() => handleRevoke(request.doctorAddress)} className="revoke-button">Reject</button>
                 </td>
               </tr>

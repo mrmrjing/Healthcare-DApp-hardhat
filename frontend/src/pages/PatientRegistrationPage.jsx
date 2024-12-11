@@ -118,7 +118,7 @@ const PatientRegistration = () => {
       setTimeout(() => navigate("/patient/dashboard"), 2000);
     } catch (error) {
       console.error("[ERROR] Registration process failed:", error);
-      setMessage("An error occurred during registration. Please try again.");
+      setMessage(`${error} Please Try again.`);
     } finally {
       setIsLoading(false);
     }
