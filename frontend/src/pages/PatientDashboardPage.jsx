@@ -191,10 +191,10 @@ const PatientDashboard = () => {
               };
             } catch (error) {
               console.log("Could not get IPFS data:", error)
-              throw "ipfs error";
+              throw new Error("ipfs error");
             }
           } else{
-            throw "no doc data";
+            throw new Error("No doc data");
           }
         })
       )
