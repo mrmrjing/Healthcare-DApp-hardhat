@@ -300,7 +300,6 @@ const PatientDashboard = () => {
             aria-label="secondary tabs example"
             variant="scrollable"
             scrollButtons="auto"
-            centere
           >
             <Tab value="upload" label="Upload" sx={{maxWidth: "180px"}}/>
             <Tab value="records" label="Records" sx={{maxWidth: "180px"}}/>
