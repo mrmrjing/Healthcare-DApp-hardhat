@@ -59,9 +59,10 @@
     const uploadToIPFS = async (data) => {
       try {
         console.log("[INFO] Uploading data to IPFS...");
+        const now = new Date();
         const encoder = new TextEncoder();
         const content = encoder.encode(JSON.stringify(data));
-        const fileName = `doctor-data-${Date.now()}.json`;
+        const fileName = `doctor-data--${now.toISOString().replace(/[:.]/g, "-")}.json`;
         const mfsPath = `/doctor-data/${fileName}`;
         await ipfs.files.write(mfsPath, content, { create: true, parents: true });
         const stats = await ipfs.files.stat(mfsPath);
