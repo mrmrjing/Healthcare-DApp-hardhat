@@ -15,10 +15,7 @@ const LandingPage = () => {
         authState.userRole === "doctor"
           ? "/doctor/request-access"
           : `/patient/dashboard`;
-
-      const timer = setTimeout(() => navigate(targetPath, { replace: true }), 3000);
-
-      return () => clearTimeout(timer);
+      navigate(targetPath, { replace: true });
     }
   }, [authState, navigate]);
 
