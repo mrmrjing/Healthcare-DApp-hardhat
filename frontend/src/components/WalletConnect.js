@@ -6,6 +6,7 @@ import {
   isProviderRegistered,
   isProviderVerified,
 } from "../services/contractService";
+import "../styles/LandingPage.css";
 
 const WalletConnect = () => {
   const { authState, setAuthState } = useContext(AuthContext);
@@ -62,17 +63,7 @@ const WalletConnect = () => {
         <div>
           <button
             onClick={connectWallet}
-            style={{
-              padding: "15px 30px",
-              fontSize: "1.1em",
-              border: "none",
-              borderRadius: "8px",
-              background: "linear-gradient(to right, #66bb6a, #43a047)",
-              color: "white",
-              cursor: "pointer",
-              boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-              transition: "all 0.3s ease",
-            }}
+            className="wallet-button"
           >
             Connect Wallet
           </button>

@@ -48,7 +48,14 @@
     border-radius: 3px;
     cursor: pointer;
   }
-  
-  button:hover {
-    background-color: #005f75;
-  }
+
+.doctor-section{
+  padding: 20px;
+  box-shadow: inset;
+}
+.input-section{
+  display: flex;
+  padding-bottom: 20px;
+  width: 100%;
+  gap: 20px;
+}

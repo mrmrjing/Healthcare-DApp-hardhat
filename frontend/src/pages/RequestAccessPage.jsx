@@ -8,6 +8,8 @@ import {
 } from "../services/contractService";
 import { AuthContext } from "../contexts/AuthContext";
 import "../styles/PatientDashboard.css";
+import TextField from '@mui/material/TextField';
+
 const { isAddress, toUtf8String } = require("ethers");
 const CryptoJS = require("crypto-js");
 const EC = require("elliptic").ec;
@@ -324,36 +326,36 @@ const RequestAccessPage = () => {
         <div className="p-logout-button"><button onClick={logout}>Log Out</button></div>
       </div>
       <h2>Request Access to Patient Records</h2>
-      <div>
-        <input
-          type="text"
-          value={patientAddress}
-          onChange={(e) => setPatientAddress(e.target.value)}
-          placeholder="Enter patient's Ethereum address"
-        />
-        <input
-          type="text"
-          value={purpose}
-          onChange={(e) => setPurpose(e.target.value)}
-          placeholder="Purpose of access"
-        />
+      <div className="doctor-section">
+        <div className="input-section">
+          <TextField 
+            label="Patient's address" placeholder="Enter patient's Ethereum address"
+            sx={{flexBasis:"50%"}}
+            value={patientAddress}
+            onChange={(e) => setPatientAddress(e.target.value)}/>
+            <TextField 
+            label="Purpose" placeholder="Purpose of access"
+            sx={{flexBasis:"50%"}}
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value)}/>
+        </div>
         <button onClick={handleRequestAccess}>Request Access</button>
       </div>
 
       <h2>Retrieve Decryption Key</h2>
-      <div>
-        <input
-          type="text"
-          value={retrieveAddress}
-          onChange={(e) => setRetrieveAddress(e.target.value)}
-          placeholder="Patient's Ethereum address"
-        />
-        <input
-          type="password"
-          value={privateKey}
-          onChange={(e) => setPrivateKey(e.target.value)}
-          placeholder="Private Key"
-        />
+      <div className="doctor-section">
+        <div className="input-section">
+          <TextField 
+            label="Patient's address" placeholder="Enter patient's Ethereum address"
+            sx={{flexBasis:"50%"}}
+            value={retrieveAddress}
+            onChange={(e) => setRetrieveAddress(e.target.value)}/>
+          <TextField 
+            label="Private Key" placeholder="Enter your private Key" type="password"
+            sx={{flexBasis:"50%"}}
+            value={privateKey}
+            onChange={(e) => setPrivateKey(e.target.value)}/>
+        </div>
         <button onClick={handleRetrieveKey}>Retrieve Key</button>
       </div>
 
