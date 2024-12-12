@@ -108,25 +108,39 @@ const UploadMedicalRecord = ({ patientAddress, onUploadSuccess, changeTab }) => 
       const result = await ipfs.add(encryptedFile);
       const cid = result.cid.toString(); // Convert CID to string for storage
       console.log("[INFO] Encrypted file successfully uploaded to IPFS. CID:", cid);
-
+  
+      // Ensure the /medical-records directory exists in MFS
+      const directoryPath = "/medical-records";
+      try {
+        console.log("[INFO] Checking if directory exists in MFS...");
+        await ipfs.files.stat(directoryPath); // Check if directory exists
+      } catch (err) {
+        if (err.message.includes("does not exist")) {
+          console.log("[INFO] Directory does not exist. Creating:", directoryPath);
+          await ipfs.files.mkdir(directoryPath, { parents: true }); // Create directory if it doesn't exist
+        } else {
+          throw err; 
+        }
+      }
+  
       // Add the uploaded file to MFS
       const now = new Date();
       const fileName = `medical-record-${now.toISOString().replace(/[:.]/g, "-")}.pdf`; 
-      const mfsPath = `/medical-records/${fileName}`;
+      const mfsPath = `${directoryPath}/${fileName}`;
       await ipfs.files.cp(`/ipfs/${cid}`, mfsPath); // Copy file from IPFS to MFS
-
+  
       console.log("[INFO] File successfully added to IPFS MFS at:", mfsPath);
-
+  
       if (cid) {
         changeTab("records");
       }
-
+  
       return cid;
     } catch (error) {
       console.error("[ERROR] IPFS upload via MFS failed:", error);
       throw new Error("Failed to upload file to IPFS and add to MFS.");
     }
-  };
+  };  
   
   return (
     <div className="upload-container">
