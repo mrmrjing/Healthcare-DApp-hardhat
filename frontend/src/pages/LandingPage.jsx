@@ -14,7 +14,9 @@ const LandingPage = () => {
       const targetPath =
         authState.userRole === "doctor"
           ? "/doctor/request-access"
-          : `/patient/dashboard`;
+          : authState.userRole === "admin"
+          ? "/admin/dashboard"
+          : "/patient/dashboard";
       navigate(targetPath, { replace: true });
     }
   }, [authState, navigate]);
