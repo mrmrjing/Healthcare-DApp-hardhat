@@ -1,4 +1,6 @@
 require("@nomicfoundation/hardhat-ethers");  // Import ethers plugin
+require("@nomicfoundation/hardhat-chai-matchers");
+
 require("dotenv").config(); // Load environment variables from a .env file
 
 
@@ -17,10 +19,10 @@ module.exports = {
     localhost: {
       url: "http://127.0.0.1:8545", // Local Hardhat node URL
     },
-    // rinkeby: {
-    //   url: process.env.RINKEBY_RPC_URL || "", // Infura or Alchemy RPC URL
-    //   accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [], // Private key for deployment
-    // },
+    sepolia: {
+      url: `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+      accounts: process.env.PRIVATE_KEYS.split(","),
+    },
   },
   paths: {
     artifacts: "./frontend/src/artifacts", // Path for compiled artifacts
