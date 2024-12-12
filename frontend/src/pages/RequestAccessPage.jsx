@@ -136,24 +136,39 @@ const RequestAccessPage = () => {
       }
   
       // Fetch authorized CIDs
-      let cid;
+      let authorizedCIDs;
       try {
-        cid = await getAuthorizedCIDs(providerAddress, retrieveAddress);
-        if (!cid) {
-          throw new Error("Authorized CID is null or undefined.");
+        authorizedCIDs = await getAuthorizedCIDs(providerAddress, retrieveAddress);
+        if (!authorizedCIDs || authorizedCIDs.length === 0) {
+          console.warn("[WARN] No authorized CIDs found.");
+          setMessage("No authorized CIDs found for this provider.");
+          return;
         }
-        console.log("[INFO] Authorized CID retrieved successfully.");
+        console.log("[INFO] Authorized CIDs retrieved successfully:", authorizedCIDs);
       } catch (error) {
-        console.error("[ERROR] Failed to fetch authorized CID:", error);
-        setMessage("Failed to fetch authorized CID for the patient.");
+        console.error("[ERROR] Failed to fetch authorized CIDs:", error);
+        setMessage("Failed to fetch authorized CIDs for the patient.");
         return;
       }
   
-      // Decrypt patient records
+      // Filter records by authorized CIDs
+      const authorizedRecords = patientRecords.filter(record =>
+        authorizedCIDs.includes(record.CID)
+      );
+  
+      if (authorizedRecords.length === 0) {
+        console.warn("[WARN] No records match the authorized CIDs.");
+        setMessage("No matching records found for authorized CIDs.");
+        return;
+      }
+  
+      console.log(`[INFO] ${authorizedRecords.length} records authorized for decryption.`);
+  
+      // Decrypt authorized records
       let records;
       try {
         records = await Promise.all(
-          patientRecords.map(async (record) => {
+          authorizedRecords.map(async (record) => {
             const { CID } = record;
             if (!CID) {
               console.warn("[WARN] Missing CID in record:", record);
@@ -201,7 +216,6 @@ const RequestAccessPage = () => {
     }
   };
   
-
   const fetchFromIPFS = async (cid) => {
     try {
       let content = "";
@@ -371,7 +385,7 @@ const RequestAccessPage = () => {
             return (
               <li key={index}>
                 <a href={url} target="_blank" rel="noopener noreferrer">
-                  View PDF Record {index + 1}
+                  View Medical Record {index + 1}
                 </a>
               </li>
             );
