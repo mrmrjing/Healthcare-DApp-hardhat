@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   approveAccess,
   revokeAccess,
@@ -12,7 +12,7 @@ import "../../styles/PatientDashboard.css";
 // Initialize elliptic curve for secp256k1 (Ethereum's curve)
 const ec = new EC("secp256k1");
 
-const GrantAccess = ({ accessRequests, medicalRecords, permissions, setPermissions, updateReqs, setAccessLogs }) => {
+const GrantAccess = ({ accessRequests, medicalRecords, permissions = [], setPermissions, updateReqs, setAccessLogs }) => {
   const [selectedCIDs, setSelectedCIDs] = useState({});
   const [message, setMessage] = useState("");
   const [masterPassword, setMasterPassword] = useState("");
