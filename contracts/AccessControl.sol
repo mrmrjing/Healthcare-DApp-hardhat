@@ -68,32 +68,48 @@ contract AccessControl {
 
     // Function for a healthcare provider to request access to a patient's data
     function requestAccess(address patientAddress, string memory purpose) external onlyVerifiedProvider {
-        require(!accessRequests[patientAddress][msg.sender].isApproved, "Access already approved");
+        //require(!accessRequests[patientAddress][msg.sender].isApproved, "Access already approved");
+        if(accessRequests[patientAddress][msg.sender].isApproved){
+            accessRequests[patientAddress][msg.sender] = AccessRequest({
+                isApproved: true,
+                isPending: true,
+                plainTextPurpose: purpose,
+                encryptedKey: "",
+                cid: accessRequests[patientAddress][msg.sender].cid,
+                timestamp: block.timestamp
+            });
+            emit AccessRequested(patientAddress, msg.sender, purpose, accessRequests[patientAddress][msg.sender].cid, block.timestamp);
+        } else{
+            accessRequests[patientAddress][msg.sender] = AccessRequest({
+                isApproved: false,
+                isPending: true,
+                plainTextPurpose: purpose,
+                encryptedKey: "",
+                cid: "",
+                timestamp: block.timestamp
+            });
+            emit AccessRequested(patientAddress, msg.sender, purpose, "", block.timestamp);
+        }
+    }
 
-        accessRequests[patientAddress][msg.sender] = AccessRequest({
-            isApproved: false,
-            isPending: true,
-            plainTextPurpose: purpose,
-            encryptedKey: "",
-            cid: "",
-            timestamp: block.timestamp
-        });
-
-        emit AccessRequested(patientAddress, msg.sender, purpose, "", block.timestamp);
-    }     
-    
-    // Function for a patient to approve a provider's access request, including the encrypted key and the CID 
+    // Function for a patient to approve a provider's access request, including the encrypted key and the CID
     function approveAccess(address providerAddress, bytes calldata encryptedKey, string calldata cid) external onlyRegisteredPatient {
-        require(
-            !accessRequests[msg.sender][providerAddress].isApproved,
-            "Access already approved"
-        );
+        //require(
+        //    !accessRequests[msg.sender][providerAddress].isApproved,
+        //    "Access already approved"
+        //);
 
         // Approve the access request and store the encrypted key
         accessRequests[msg.sender][providerAddress].isApproved = true;
         accessRequests[msg.sender][providerAddress].isPending = false;
         accessRequests[msg.sender][providerAddress].encryptedKey = encryptedKey;
-        accessRequests[msg.sender][providerAddress].cid = cid;
+        if(bytes(accessRequests[msg.sender][providerAddress].cid).length == 0){
+            accessRequests[msg.sender][providerAddress].cid = cid;
+        } else {
+            accessRequests[msg.sender][providerAddress].cid = string(
+                abi.encodePacked(accessRequests[msg.sender][providerAddress].cid, ",", cid)
+            );
+        }
         accessRequests[msg.sender][providerAddress].timestamp = block.timestamp;
 
         // Emit an event for the approval, including the encrypted key
@@ -146,7 +162,7 @@ contract AccessControl {
         return accessRequests[patientAddress][providerAddress].cid;
     }
 
-    // Function to fetch CIDs that a provider has access to 
+    // Function to fetch CIDs that a provider has access to
     function getAuthorizedCIDs(address providerAddress, address patientAddress) external view onlyVerifiedProvider returns (string memory) {
         require(accessRequests[patientAddress][providerAddress].isApproved, "Access not granted.");
         return accessRequests[patientAddress][providerAddress].cid;

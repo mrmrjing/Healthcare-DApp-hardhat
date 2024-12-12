@@ -31,6 +31,7 @@
   
   table {
     width: 100%;
+    max-width: 100vw !important;
     border-collapse: collapse;
   }
   
@@ -38,6 +39,10 @@
     border: 1px solid #ccc;
     padding: 10px;
     text-align: left;
+    word-wrap: break-word !important;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
   
   button {

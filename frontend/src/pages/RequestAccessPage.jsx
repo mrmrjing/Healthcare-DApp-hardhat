@@ -136,13 +136,12 @@ const RequestAccessPage = () => {
       }
   
       // Fetch authorized CIDs
-      let authorizedCIDs;
+      let cids;
       try {
-        authorizedCIDs = await getAuthorizedCIDs(providerAddress, retrieveAddress);
-        if (!authorizedCIDs || authorizedCIDs.length === 0) {
-          console.warn("[WARN] No authorized CIDs found.");
-          setMessage("No authorized CIDs found for this provider.");
-          return;
+        cids = await getAuthorizedCIDs(providerAddress, retrieveAddress);
+        console.log("accessibleRecords cid: ", cids);
+        if (!cids) {
+          throw new Error("Authorized CID is null or undefined.");
         }
         console.log("[INFO] Authorized CIDs retrieved successfully:", authorizedCIDs);
       } catch (error) {
@@ -167,34 +166,38 @@ const RequestAccessPage = () => {
       // Decrypt authorized records
       let records;
       try {
-        records = await Promise.all(
-          authorizedRecords.map(async (record) => {
-            const { CID } = record;
-            if (!CID) {
-              console.warn("[WARN] Missing CID in record:", record);
-              return null;
-            }
-            let encryptedContent;
-            try {
-              encryptedContent = await fetchFromIPFS(CID);
-              if (!encryptedContent) {
-                throw new Error(`Content for CID ${CID} is null or undefined.`);
+        const accessibleRecords = patientRecords.filter(record => cids.includes(record.CID));
+        if (accessibleRecords.length > 0){
+          records = await Promise.all(
+            accessibleRecords.map(async (record) => {
+              const { CID } = record;
+              if (!CID) {
+                console.warn("[WARN] Missing CID in record:", record);
+                return null;
               }
-              console.log(`[INFO] Fetched encrypted content for CID: ${CID}`);
-            } catch (error) {
-              console.error(`[ERROR] Failed to fetch content from IPFS for CID: ${CID}`, error);
-              return null;
-            }
-  
-            try {
-              return decryptRecord(encryptedContent, decryptedSymmetricKey);
-            } catch (error) {
-              console.error(`[ERROR] Failed to decrypt record for CID: ${CID}`, error);
-              return null;
-            }
-          })
-        );
-  
+              let encryptedContent;
+              try {
+                encryptedContent = await fetchFromIPFS(CID);
+                if (!encryptedContent) {
+                  throw new Error(`Content for CID ${CID} is null or undefined.`);
+                }
+                console.log(`[INFO] Fetched encrypted content for CID: ${CID}`);
+              } catch (error) {
+                console.error(`[ERROR] Failed to fetch content from IPFS for CID: ${CID}`, error);
+                return null;
+              }
+    
+              try {
+                return decryptRecord(encryptedContent, decryptedSymmetricKey);
+              } catch (error) {
+                console.error(`[ERROR] Failed to decrypt record for CID: ${CID}`, error);
+                return null;
+              }
+            })
+          );
+        } else {
+          throw new Error("No records found.")
+        }
         const validRecords = records.filter((record) => record !== null);
         if (validRecords.length === 0) {
           throw new Error("No records could be decrypted successfully.");

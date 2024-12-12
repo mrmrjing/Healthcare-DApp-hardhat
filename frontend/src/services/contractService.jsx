@@ -98,7 +98,7 @@ export const approveAccess = async (providerAddress, encryptedKey, cid) => {
 
     const accessControl = await getContract("accessControl");
     console.log("[INFO] Approving access for provider:", providerAddress);
-
+    
     const tx = await accessControl.approveAccess(providerAddress, encryptedKey, cid);
     await tx.wait();
 
@@ -646,8 +646,8 @@ export const getAuthorizedCIDs = async (providerAddress, patientAddress) => {
 
     const cid = await accessControl.getAuthorizedCIDs(providerAddress, patientAddress);
     console.log("[SUCCESS] Authorized CIDs retrieved:", cid);
-
-    return cid;
+    const cidList = cid.split(",");
+    return cidList;
   } catch (error) {
     console.error("[ERROR] Error fetching authorized CIDs:", error.message);
     throw error;

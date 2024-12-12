@@ -7,11 +7,12 @@ import {
 import CryptoJS from "crypto-js";
 import { ec as EC } from "elliptic";
 import { hexlify, toUtf8Bytes } from "ethers";
+import "../../styles/PatientDashboard.css";
 
 // Initialize elliptic curve for secp256k1 (Ethereum's curve)
 const ec = new EC("secp256k1");
 
-const GrantAccess = ({ accessRequests, medicalRecords, setPermissions, updateReqs, setAccessLogs }) => {
+const GrantAccess = ({ accessRequests, medicalRecords, permissions, setPermissions, updateReqs, setAccessLogs }) => {
   const [selectedCIDs, setSelectedCIDs] = useState({});
   const [message, setMessage] = useState("");
   const [masterPassword, setMasterPassword] = useState("");
@@ -97,7 +98,9 @@ const GrantAccess = ({ accessRequests, medicalRecords, setPermissions, updateReq
         type: "Provider",
         access: true,
       }
-      setPermissions(prevPermissions => [...prevPermissions, newPerm])
+      if(!permissions.some(perm => perm.id === request.doctorAddress)){
+        setPermissions(prevPermissions => [...prevPermissions, newPerm])
+      }
       const newRequests = accessRequests.filter(req => req.doctorAddress !== request.doctorAddress)
       updateReqs(newRequests)
       setAccessLogs({
@@ -138,7 +141,7 @@ const GrantAccess = ({ accessRequests, medicalRecords, setPermissions, updateReq
   };
 
   return (
-    <div className="grant-access-page">
+    <div className="access-container">
       <h2>Grant Access</h2>
       <div>
         <label>Master Password:</label>
@@ -150,12 +153,13 @@ const GrantAccess = ({ accessRequests, medicalRecords, setPermissions, updateReq
         <p><em>Your master password is used to decrypt your encryption keys.</em></p>
       </div>
       {accessRequests.length > 0 ? (
-        <table className="access-requests-table">
+        <table style={{maxWidth: "100vw", width: "auto"}}>
           <thead>
             <tr>
               <th>Doctor Name</th>
               <th>Date Requested</th>
               <th>Purpose</th>
+              <th>Current Access</th>
               <th>Select Medical Records (CIDs)</th>
               <th>Actions</th>
             </tr>
@@ -166,6 +170,7 @@ const GrantAccess = ({ accessRequests, medicalRecords, setPermissions, updateReq
                 <td>{request.docName}</td>
                 <td>{request.date}</td>
                 <td>{request.plainTextPurpose}</td>
+                <td>{request.cid}</td>
                 <td>
                   <select multiple onChange={e => handleCIDSelection(e, index)}>
                     {medicalRecords.map((record, i) => (
