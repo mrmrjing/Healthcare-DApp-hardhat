@@ -170,7 +170,7 @@ const GrantAccess = ({ accessRequests, medicalRecords, permissions = [], setPerm
                 <td>{request.docName}</td>
                 <td>{request.date}</td>
                 <td>{request.plainTextPurpose}</td>
-                <td>{request.cid}</td>
+                <td>{request.cid == "" ? "No Authorised Records" : request.cid}</td>
                 <td>
                   <select multiple onChange={e => handleCIDSelection(e, index)}>
                     {medicalRecords.map((record, i) => (
