@@ -59,16 +59,13 @@ const PatientDashboard = () => {
 
       const providerEvents = await getProviderRegistryEvents();
       console.debug("[DEBUG] Provider registry events:", providerEvents);
-      console.log("authPro", providerEvents)
 
       const filteredEvents = await Promise.all(
         providerEvents.map(async (event) => {
           const hasAccess = await checkAccess(patientAddress, event.address);
-          console.log("hasAccess", hasAccess)
           return hasAccess ? event : null;
         })
       );
-      console.log("filtered", filteredEvents)
       const authorizedProviders = filteredEvents.filter(Boolean);
 
       await Promise.all(authorizedProviders.map(async (e)=>{
@@ -145,7 +142,6 @@ const PatientDashboard = () => {
     try {
       console.info("[INFO] Fetching requests for patient:", patientAddress);
       const reqs = await fetchPendingRequests(patientAddress);
-      console.log("reqs",reqs)
       const pengingRequests = await Promise.all(
         reqs.map(async (req) => {
           const isPending = await checkPending(patientAddress, req.doctorAddress);
@@ -383,7 +379,7 @@ const PatientDashboard = () => {
         </section>
         {/* Grant Access Section */}
         <section className="section">
-          <GrantAccess accessRequests={accessRequests} medicalRecords={medicalRecords} permissions={permissions} setPermissions={setPermissions} updateReqs={handleReqUpdate} setAccessLogs={handleLogUpdate}/>
+          <GrantAccess accessRequests={accessRequests} medicalRecords={medicalRecords} setPermissions={setPermissions} updateReqs={handleReqUpdate} setAccessLogs={handleLogUpdate}/>
         </section>
       </div>:''}
     </div>
